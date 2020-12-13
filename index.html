@@ -1,0 +1,29 @@
+<html>
+    <head>
+        <div style="width: 100vw; height: 100vh;">
+            <button id="importBtn" style="height: 50px; width: 50%; margin-top: 20px;"> Import </button>
+            <button id="exportBtn" style="height: 50px; width: 50%; margin-top: 20px;"> Export </button>
+        </div>
+    </head>
+    <body>
+        <script>
+            function sendRequest(reqKind, reqBody, onResponse){
+                const xhr = new XMLHttpRequest();
+                xhr.addEventListener('load', ()=>{onResponse(xhr.response);});
+                xhr.addEventListener('error', ()=>{ console.log("error"); });
+                xhr.open('POST', reqKind);
+                xhr.send(reqBody);
+            };
+
+            document.getElementById("importBtn").addEventListener("click", ()=>{
+                const filePath = prompt("Enter file path", "./");
+                sendRequest('import', filePath, (resp)=>{ console.log(resp); });
+            });
+
+            document.getElementById("exportBtn").addEventListener("click", ()=>{
+                const filePath = prompt("Enter file path", "./");
+                sendRequest('export', filePath, (resp)=>{ console.log(resp); });
+            });
+        </script>
+    </body>
+</html>
