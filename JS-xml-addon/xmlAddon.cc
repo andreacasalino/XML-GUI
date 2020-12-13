@@ -1,5 +1,5 @@
 #include "xmlAddon.h"
-#include <ErrorHandler.h>
+#include <ParserError.h>
 using namespace Napi;
 
 #define ARGS_CHECK(NUMBERS_EXPECTED) \
@@ -31,7 +31,7 @@ Napi::Value xmlJS::Import(const Napi::CallbackInfo& info) {
     // TODO parse new strct and send back
   }
   catch(...) {
-    return;
+    return Napi::String::New(env, "");
   }
 }
 
@@ -46,7 +46,7 @@ void xmlJS::Export(const Napi::CallbackInfo& info){
 Napi::Object xmlJS::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
 
-  xmlPrs::ErrorHandler::useThrow();
+  xmlPrs::UseThrowError();
   Napi::Function func = DefineClass(env, "xmlJS", {
     InstanceMethod("Import", &xmlJS::Import),
     InstanceMethod("Export", &xmlJS::Export)

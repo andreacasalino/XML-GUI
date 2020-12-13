@@ -2,8 +2,17 @@ cmake_minimum_required(VERSION 3.9)
 cmake_policy(SET CMP0042 NEW)
 set (CMAKE_CXX_STANDARD 17)
 
+# set macro-directory and find scripts
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/XML-parser/cmake/")
+# include cmake custom functions
+set(WITH_SOURCE_TREE ON)
+include(GroupSources)
+include(AutoCollect)
+include(Log)
+include(SetInstallRPath)
+
 project (addon-xml)
-include_directories(XML-parser/Lib)
+add_subdirectory(XML-parser/Lib)
 
 include_directories(${CMAKE_JS_INC})
 file(GLOB SOURCE_FILES "xmlAddon.cc")
