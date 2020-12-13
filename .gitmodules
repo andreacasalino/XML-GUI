@@ -1,0 +1,3 @@
+[submodule "JS-xml-addon/XML-parser"]
+	path = JS-xml-addon/XML-parser
+	url = https://github.com/andreacasalino/XML-parser
