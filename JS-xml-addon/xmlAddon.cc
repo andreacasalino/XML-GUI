@@ -24,29 +24,29 @@ xmlJS::xmlJS(const Napi::CallbackInfo& info) : ObjectWrap(info) {
 Napi::Value xmlJS::Import(const Napi::CallbackInfo& info) {
   ARGS_CHECK(1)
   STRING_CHECK(0)
-  // try {
-  //   std::unique_ptr<xmlPrs::Parser> newStructure = std::make_unique<xmlPrs::Parser>(AS_STRING(0));
-  //   this->structure = std::move(newStructure);
-  //   return Napi::String::New(env, "");
-  //   // TODO parse new strct and send back
-  // }
-  // catch(...) {
+  try {
+    std::unique_ptr<xmlPrs::Parser> newStructure = std::make_unique<xmlPrs::Parser>(AS_STRING(0));
+    this->structure = std::move(newStructure);
     return Napi::String::New(env, "");
-  // }
+    // TODO parse new strct and send back
+  }
+  catch(...) {
+    return Napi::String::New(env, "");
+  }
 }
 
 void xmlJS::Export(const Napi::CallbackInfo& info){
   ARGS_CHECK(1)
   STRING_CHECK(0)
-  // if(nullptr != this->structure) {
-  //   this->structure->Reprint(AS_STRING(0));
-  // }
+  if(nullptr != this->structure) {
+    this->structure->Reprint(AS_STRING(0));
+  }
 }
 
 Napi::Object xmlJS::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
 
-  // xmlPrs::UseThrowError();
+  xmlPrs::UseThrowError();
   Napi::Function func = DefineClass(env, "xmlJS", {
     InstanceMethod("Import", &xmlJS::Import),
     InstanceMethod("Export", &xmlJS::Export)
