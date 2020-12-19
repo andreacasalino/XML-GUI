@@ -1,5 +1,5 @@
 {
-  "name": "addon-xml",
+  "name": "xml-addon",
   "version": "0.0.0",
   "description": "xml handler addon",
   "private": true,

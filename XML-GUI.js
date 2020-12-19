@@ -1,4 +1,4 @@
-var addon = require('./JS-xml-addon/build/Release/....');
+var addon = require('./xml-addon/build/Release/xml-addon.node');
 
 const http = require('http')
 const fs = require('fs')
@@ -28,16 +28,9 @@ const server = http.createServer((req, res) => {
         });
     }
 
-    if(req.url.localeCompare('/import') === 0){
-        process((body)=>{
-            res = XMLparser.Import(body);
-        });
-    }
-    else if(req.url.localeCompare('/export') === 0){
-        process((body)=>{
-            XMLparser.Export(body);
-        });
-    }
+    process((request)=>{
+        res = XMLparser.ProcessRequest(request);
+    });
 })
 
 server.listen(process.env.PORT || 3000);
