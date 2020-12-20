@@ -9,7 +9,7 @@ const server = http.createServer((req, res) => {
     console.log(req.url);
     if(req.url.localeCompare('/') === 0){
         res.writeHead(200, { 'content-type': 'text/html' });
-        fs.createReadStream('index.html').pipe(res);
+        fs.createReadStream('XML-GUI.html').pipe(res);
         return;
     }
     if(req.url.localeCompare('/favicon.ico') === 0){
@@ -28,8 +28,26 @@ const server = http.createServer((req, res) => {
         });
     }
 
+    // check that is a file to be served
+    let isStaticFile = false;
+    for(let p=0; p<req.url.length; ++p) {
+        if(req.url[p] === '.'){
+            isStaticFile = true;
+            break; 
+        }
+    }
+    if(isStaticFile){
+        res.writeHead(200, { 'content-type': 'text' });
+        fs.createReadStream("./" + req.url).pipe(res);
+        return;
+    }
+
     process((request)=>{
         vals = JSON.parse(request);
+        console.log("req bodies:");
+        console.log(vals);
+        console.log("");
+
         if(vals.length == 0){
             res = XMLparser.ProcessRequest(req.url);
         }

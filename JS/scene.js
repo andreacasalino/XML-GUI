@@ -1,5 +1,3 @@
-const { join } = require("path");
-
 class Scene{
     constructor(network_canvas, cleanCommands, tagCommands, attrCommands){
 		this.network = null;
