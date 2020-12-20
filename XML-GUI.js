@@ -29,7 +29,19 @@ const server = http.createServer((req, res) => {
     }
 
     process((request)=>{
-        res = XMLparser.ProcessRequest(request);
+        vals = JSON.parse(request);
+        if(vals.length == 0){
+            res = XMLparser.ProcessRequest(req.url);
+        }
+        else if(vals.length == 1){
+            res = XMLparser.ProcessRequest(req.url, vals[0]);
+        }
+        else if(vals.length == 2){
+            res = XMLparser.ProcessRequest(req.url, vals[0], vals[1]);
+        }
+        else {
+            console.log("too many arguments in request: ");
+        }
     });
 })
 

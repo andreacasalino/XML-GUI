@@ -33,23 +33,21 @@ private:
     std::string GetJSON();
 
     enum nodeType{ undefined, tag, attribute};
-    nodeType Select(const Napi::CallbackInfo&);
+    nodeType GetNodeType(const std::size_t& id);
 
-    void DeSelect();
+    void Import(const std::string& fileName);
 
-    void Import(const Napi::CallbackInfo&);
+    void Export(const std::string& fileName);
 
-    void Export(const Napi::CallbackInfo&);
+    void Delete(const std::size_t& id);
 
-    void Delete(const Napi::CallbackInfo&);
+    void Rename(const std::size_t& id, const std::string& newName);
 
-    void Rename(const Napi::CallbackInfo&);
+    void NestTag(const std::size_t& parentId, const std::string& tagName);
 
-    void NestTag(const Napi::CallbackInfo&);
+    void NestAttribute(const std::size_t& parentId, const std::string& attrName);
 
-    void AddAttribute(const Napi::CallbackInfo&);
-
-    void SetValue(const Napi::CallbackInfo&);
+    void SetValue(const std::size_t& id, const std::string& value);
 
 private:
     struct xmlNodePosition {
@@ -60,9 +58,8 @@ private:
     void updateJsonNodes();
     void updateJsonTag(std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId);
 
-    std::map<std::string, std::function<std::string(const Napi::CallbackInfo& info)>> commands;
+    std::map<std::string, std::function<std::string(const Napi::CallbackInfo&)>> commands;
 // data
     std::unique_ptr<xmlPrs::Parser>        data;
     std::map<std::size_t, xmlNodePosition> jsonNodes;
-    int                                    selectedNode; // -1 when not selected
 };
