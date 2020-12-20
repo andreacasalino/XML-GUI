@@ -30,8 +30,6 @@ public:
     Napi::Value ProcessRequest(const Napi::CallbackInfo&);
 
 private:
-    std::string GetJSON();
-
     enum nodeType{ undefined, tag, attribute};
     nodeType GetNodeType(const std::size_t& id);
 
@@ -53,13 +51,13 @@ private:
     struct xmlNodePosition {
         std::vector<std::string> pathFromRoot;
         OptionalString           attributeName; // empty for tag
-        std::size_t              parentId;
     };    
     void updateJsonNodes();
-    void updateJsonTag(std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId);
+    void updateJsonTag(std::list<std::string>& nodes, std::list<std::string>& edges, std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId);
 
     std::map<std::string, std::function<std::string(const Napi::CallbackInfo&)>> commands;
 // data
     std::unique_ptr<xmlPrs::Parser>        data;
-    std::map<std::size_t, xmlNodePosition> jsonNodes;
+    std::map<std::size_t, xmlNodePosition> nodesInfo;
+    std::string                            dataJSON;
 };
