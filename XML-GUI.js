@@ -1,4 +1,4 @@
-var addon = require('./xml-addon/build/Release/xml-addon.node');
+var addon = require('./JS-xml-addon/build/Release/xml-addon.node');
 
 const http = require('http')
 const fs = require('fs')

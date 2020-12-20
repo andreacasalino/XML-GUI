@@ -5,14 +5,14 @@ using namespace Napi;
 
 OptionalString::OptionalString(const OptionalString& o) {
   if(nullptr != o.content){
-    this->content = std::make_unique<std::string>(o.content);
+    this->content = std::make_unique<std::string>(*o.content.get());
   }
 }
 
 OptionalString& OptionalString::operator=(const OptionalString& o){
   this->content.reset();
   if(nullptr != o.content){
-    this->content = std::make_unique<std::string>(o.content);
+    this->content = std::make_unique<std::string>(*o.content.get());
   }
   return *this;
 }
