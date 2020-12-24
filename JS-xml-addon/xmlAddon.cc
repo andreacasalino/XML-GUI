@@ -67,8 +67,8 @@ std::string JSONArrayStream::get() {
 
 
 
-#define COLOR_TAG "#92A8D1"
-#define COLOR_ATTR "#F7CAC9"
+#define COLOR_TAG "#0A5407"
+#define COLOR_ATTR "#A59407"
 
 #define ARGS_CHECK(NUMBERS_EXPECTED) \
   Napi::Env env = info.Env(); \
