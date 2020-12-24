@@ -4,6 +4,7 @@
 #include <TagHandler.h>
 #include <map>
 #include <functional>
+#include <sstream>
 
 class OptionalString {
 public:
@@ -20,6 +21,18 @@ public:
     const std::string& get() const;
 private:
     std::unique_ptr<std::string> content;
+};
+
+class JSONArrayStream {
+public:
+    JSONArrayStream();
+
+    void add(const std::string& element);
+
+    std::string get();
+private:
+    bool isFirstElement;
+    std::stringstream stream;
 };
 
 class xmlJS : public Napi::ObjectWrap<xmlJS> {
@@ -52,8 +65,9 @@ private:
         std::vector<std::string> pathFromRoot;
         OptionalString           attributeName; // empty for tag
     };    
+
     void updateJsonNodes();
-    void updateJsonTag(std::list<std::string>& nodes, std::list<std::string>& edges, std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId);
+    void updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId);
 
     std::map<std::string, std::function<std::string(const Napi::CallbackInfo&)>> commands;
 // data

@@ -37,13 +37,13 @@ class Scene{
 		let this_ref = this;
 		this.network.on("click", (params) => {
 			params.event = "[original event]";
-			this.selectedNode = parseInt(params.nodes[0]);
+			this.selectedNode =  params.nodes[0];
 			this.sendCommand("getNodeType", JSON.stringify([this.selectedNode]), (nodeType)=>{ 
 				if(nodeType === 't'){
-					this_ref.commandActions[1];
+					this_ref.commandActions[1]();
 				}
 				else if(nodeType === 'a') {
-					this_ref.commandActions[2];
+					this_ref.commandActions[2]();
 				}
 				else {
 					console.log("unkown node type received");

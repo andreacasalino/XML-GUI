@@ -74,10 +74,10 @@ const server = http.createServer((req, res) => {
             return logAndReturn(XMLparser.ProcessRequest(req.url));
         }
         else if(vals.length == 1){
-            return logAndReturn(XMLparser.ProcessRequest(req.url, vals[0]));
+            return logAndReturn(XMLparser.ProcessRequest(req.url, vals[0] ));
         }
         else if(vals.length == 2){
-            return logAndReturn(XMLparser.ProcessRequest(req.url, vals[0], vals[1]));
+            return logAndReturn(XMLparser.ProcessRequest(req.url, vals[0], vals[1] ));
         }
         else {
             console.log("too many arguments in request: ");

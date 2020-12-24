@@ -135,7 +135,7 @@
                 });
             };
 
-            var scene = new Scene(B_canvas , deactivate_btns, activate_tag_actions, activate_attribute_actions);
+            var scene = new Scene(B_canvas , ()=>{deactivate_btns();}, ()=>{activate_tag_actions();}, ()=>{activate_attribute_actions();});
 
         </script>
     </body>

@@ -1,6 +1,5 @@
 #include "xmlAddon.h"
 #include <ParserError.h>
-#include <sstream>
 using namespace Napi;
 
 OptionalString::OptionalString(const OptionalString& o) {
@@ -42,6 +41,29 @@ void OptionalString::set(const std::string& value){
 const std::string& OptionalString::get() const{
   return *this->content.get();
 }
+
+
+
+JSONArrayStream::JSONArrayStream() : isFirstElement(true) { this->stream << "["; };
+
+void JSONArrayStream::add(const std::string& element){
+    if(this->isFirstElement) {
+      this->isFirstElement = false;
+    }
+    else {
+      this->stream << ",";
+    }
+    this->stream << element;
+};
+
+std::string JSONArrayStream::get() { 
+    this->stream << "]"; 
+    std::string result = this->stream.str();
+    this->stream.clear();
+    this->isFirstElement = true;
+    this->stream << "[";
+    return result;
+};
 
 
 
@@ -135,26 +157,26 @@ Napi::Value xmlJS::ProcessRequest(const Napi::CallbackInfo& info){
   return Napi::String::New(env, it->second(info).c_str());
 }
 
-void printTag(std::list<std::string>& nodes, const std::size_t& counter, const std::string& name){
+void printTag(JSONArrayStream& nodes, const std::size_t& counter, const std::string& name){
   std::stringstream s;
   s << "{\"label\":\"<" << name << ">\"";
   s << ",\"color\":\"" << COLOR_TAG << "\"";
   s << ",\"id\":\"" << counter << "\"";
   s << "}";
-  nodes.emplace_back(s.str());
+  nodes.add(s.str());
 };
 
-void printAttribute(std::list<std::string>& nodes, const std::size_t& counter, const std::string& name, const std::string& value){
+void printAttribute(JSONArrayStream& nodes, const std::size_t& counter, const std::string& name, const std::string& value){
   std::stringstream s;
   s << "{\"label\":\"" << name << "=" << value << "\"";
   s << ",\"color\":\"" << COLOR_ATTR << "\"";
   s << ",\"id\":\"" << counter << "\"";
   s << ",\"shape\":\"box\"";
   s << "}";
-  nodes.emplace_back(s.str());
+  nodes.add(s.str());
 };
 
-void printEdge(std::list<std::string>& edges, const std::size_t& from, const std::size_t& to, const bool& leads2Tag){
+void printEdge(JSONArrayStream& edges, const std::size_t& from, const std::size_t& to, const bool& leads2Tag){
   std::stringstream s;
   s << "{\"from\":\"" << from << "\"";
   s << ",\"to\":\"" << to << "\"";
@@ -166,10 +188,10 @@ void printEdge(std::list<std::string>& edges, const std::size_t& from, const std
     s << ",\"color\":\"" << COLOR_ATTR << "\"";
   }
   s << "}";
-  edges.emplace_back(s.str());
+  edges.add(s.str());
 };
 
-void xmlJS::updateJsonTag(std::list<std::string>& nodes, std::list<std::string>& edges, std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId) {
+void xmlJS::updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId) {
   xmlNodePosition position(parentPosition);
   position.pathFromRoot.push_back(tag.GetTagName());
   ++counter;
@@ -197,27 +219,19 @@ void xmlJS::updateJsonNodes() {
   std::size_t counter = 0;
   xmlNodePosition rootPosition;
   this->nodesInfo.emplace(counter, rootPosition);
-  std::list<std::string> nodes, edges;
+  JSONArrayStream nodes, edges;
   auto root = this->data->GetRoot();
   printTag(nodes, 0, root.GetTagName());
-  this->updateJsonTag(nodes, edges, counter, root, rootPosition, 0);
+  auto rootNested = root.GetNestedAll();
+  for(auto it = rootNested.begin(); it!=rootNested.end(); ++it){
+    this->updateJsonTag(nodes, edges, counter, *it, rootPosition, 0);
+  }
+
   std::stringstream json;
-  auto arrayStr = [&json](const std::list<std::string>& array){
-    json << "[";
-    if(!array.empty()) {
-      auto it = array.begin();
-      json << *it;
-      ++it;
-      for(it; it!=array.end(); ++it){
-        json << "," << *it;
-      }
-    }
-    json << "]";
-  };
   json << "{\"nodes\":";
-  arrayStr(nodes);
+  json << nodes.get();
   json << ",\"edges\":";
-  arrayStr(edges);
+  json << edges.get();
   json << "}";
   this->dataJSON = json.str();
 }
@@ -228,9 +242,9 @@ xmlJS::nodeType xmlJS::GetNodeType(const std::size_t& id) {
     return nodeType::undefined;
   }
   if(nullptr == it->second.attributeName) {
-    return nodeType::attribute;
+    return nodeType::tag;
   }
-  return nodeType::tag;
+  return nodeType::attribute;
 }
 
 void xmlJS::Import(const std::string& fileName){
