@@ -1,71 +1,6 @@
-#include "xmlAddon.h"
+#include "../xmlAddon.h"
 #include <ParserError.h>
 using namespace Napi;
-
-OptionalString::OptionalString(const OptionalString& o) {
-  if(nullptr != o.content){
-    this->content = std::make_unique<std::string>(*o.content.get());
-  }
-}
-
-OptionalString& OptionalString::operator=(const OptionalString& o){
-  this->content.reset();
-  if(nullptr != o.content){
-    this->content = std::make_unique<std::string>(*o.content.get());
-  }
-  return *this;
-}
-
-OptionalString& OptionalString::operator=(OptionalString&& o){
-  this->content = std::move(o.content);
-  return *this;
-}
-
-bool operator==(std::nullptr_t, const OptionalString& s){
-  return (nullptr == s.content);
-}
-
-bool operator!=(std::nullptr_t, const OptionalString& s){
-  return !(nullptr == s);
-}
-
-void OptionalString::set(const std::string& value){
-  if(nullptr == this->content){
-    this->content = std::make_unique<std::string>(value);
-  }
-  else {
-    *this->content = value;
-  }
-}
-
-const std::string& OptionalString::get() const{
-  return *this->content.get();
-}
-
-
-
-JSONArrayStream::JSONArrayStream() : isFirstElement(true) { this->stream << "["; };
-
-void JSONArrayStream::add(const std::string& element){
-    if(this->isFirstElement) {
-      this->isFirstElement = false;
-    }
-    else {
-      this->stream << ",";
-    }
-    this->stream << element;
-};
-
-std::string JSONArrayStream::get() { 
-    this->stream << "]"; 
-    std::string result = this->stream.str();
-    this->stream.clear();
-    this->isFirstElement = true;
-    this->stream << "[";
-    return result;
-};
-
-
 
 #define COLOR_TAG "#0A5407"
 #define COLOR_ATTR "#A59407"
@@ -163,7 +98,7 @@ void printTag(JSONArrayStream& nodes, const std::size_t& counter, const std::str
   s << ",\"color\":\"" << COLOR_TAG << "\"";
   s << ",\"id\":\"" << counter << "\"";
   s << "}";
-  nodes.add(s.str());
+  nodes << s.str();
 };
 
 void printAttribute(JSONArrayStream& nodes, const std::size_t& counter, const std::string& name, const std::string& value){
@@ -173,7 +108,7 @@ void printAttribute(JSONArrayStream& nodes, const std::size_t& counter, const st
   s << ",\"id\":\"" << counter << "\"";
   s << ",\"shape\":\"box\"";
   s << "}";
-  nodes.add(s.str());
+  nodes << s.str();
 };
 
 void printEdge(JSONArrayStream& edges, const std::size_t& from, const std::size_t& to, const bool& leads2Tag){
@@ -188,7 +123,7 @@ void printEdge(JSONArrayStream& edges, const std::size_t& from, const std::size_
     s << ",\"color\":\"" << COLOR_ATTR << "\"";
   }
   s << "}";
-  edges.add(s.str());
+  edges << s.str();
 };
 
 void xmlJS::updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId) {
@@ -229,9 +164,9 @@ void xmlJS::updateJsonNodes() {
 
   std::stringstream json;
   json << "{\"nodes\":";
-  json << nodes.get();
+  json << nodes.reset();
   json << ",\"edges\":";
-  json << edges.get();
+  json << edges.reset();
   json << "}";
   this->dataJSON = json.str();
 }
@@ -277,7 +212,7 @@ void xmlJS::Delete(const std::size_t& id){
       tag.Remove();
     }
     else{
-      tag.RemoveAttribute( it->second.attributeName.get());
+      tag.RemoveAttribute( *it->second.attributeName);
     }
     this->updateJsonNodes();
   }
@@ -291,7 +226,7 @@ void xmlJS::Rename(const std::size_t& id, const std::string& newName){
       tag.SetTagName(newName);
     }
     else{
-      tag.SetAttributeName(it->second.attributeName.get(), newName);
+      tag.SetAttributeName(*it->second.attributeName, newName);
     }
     this->updateJsonNodes();
   }
@@ -319,8 +254,8 @@ void xmlJS::SetValue(const std::size_t& id, const std::string& value){
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end() && (nullptr != it->second.attributeName)){
     auto tag = this->data->GetRoot().GetNested(it->second.pathFromRoot);
-    auto valOld = tag.GetAttributeValueFirst(it->second.attributeName.get());
-    tag.SetAttributeValue(it->second.attributeName.get(), valOld, value);
+    auto valOld = tag.GetAttributeValueFirst(*it->second.attributeName);
+    tag.SetAttributeValue(*it->second.attributeName, valOld, value);
     this->updateJsonNodes();
   }
 }

@@ -4,36 +4,8 @@
 #include <TagHandler.h>
 #include <map>
 #include <functional>
-#include <sstream>
-
-class OptionalString {
-public:
-    OptionalString() = default;    
-    OptionalString(const OptionalString& o);
-    OptionalString& operator=(const OptionalString& o);
-    OptionalString(OptionalString&& o) = default;
-    OptionalString& operator=(OptionalString&& o);
-
-    friend bool operator==(std::nullptr_t, const OptionalString&);
-    friend bool operator!=(std::nullptr_t, const OptionalString&);
-
-    void set(const std::string& value);
-    const std::string& get() const;
-private:
-    std::unique_ptr<std::string> content;
-};
-
-class JSONArrayStream {
-public:
-    JSONArrayStream();
-
-    void add(const std::string& element);
-
-    std::string get();
-private:
-    bool isFirstElement;
-    std::stringstream stream;
-};
+#include "src/OptionalString.h"
+#include "src/JsonArrayStream.h"
 
 class xmlJS : public Napi::ObjectWrap<xmlJS> {
 public:

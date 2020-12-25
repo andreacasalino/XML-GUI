@@ -16,7 +16,7 @@ include(SetInstallRPath)
 add_subdirectory(XML-parser/Lib)
 
 include_directories(${CMAKE_JS_INC})
-file(GLOB SOURCE_FILES "xmlAddon.cc")
+file(GLOB SOURCE_FILES "src/xmlAddon.cc" "src/OptionalString.cpp" "src/JsonArrayStream.cpp")
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
 target_link_libraries(${PROJECT_NAME} 
