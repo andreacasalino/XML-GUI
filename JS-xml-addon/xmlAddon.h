@@ -1,8 +1,7 @@
 // https://napi.inspiredware.com/getting-started/objectwrap.html#src-object-wrap-demo-cc-and-src-object-wrap-demo-h
 
 #include <napi.h>
-#include <TagHandler.h>
-#include <map>
+#include <Parser.h>
 #include <functional>
 #include "src/OptionalString.h"
 #include "src/JsonArrayStream.h"
@@ -39,11 +38,11 @@ private:
     };    
 
     void updateJsonNodes();
-    void updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId);
+    void updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::size_t& counter, const xmlPrs::Tag& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId);
 
     std::map<std::string, std::function<std::string(const Napi::CallbackInfo&)>> commands;
 // data
-    std::unique_ptr<xmlPrs::Parser>        data;
+    xmlPrs::Parser                         data;
     std::map<std::size_t, xmlNodePosition> nodesInfo;
     std::string                            dataJSON;
 };

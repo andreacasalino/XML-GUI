@@ -1,5 +1,4 @@
 #include "../xmlAddon.h"
-#include <ParserError.h>
 #include <iostream>
 using namespace Napi;
 
@@ -34,9 +33,9 @@ std::ostream& operator<<(std::ostream& s, const std::vector<std::string>& collec
 
 #define AS_SIZE_T(POSITION) static_cast<std::size_t>(std::atoi(AS_STRING(POSITION).c_str()))
 
-xmlJS::xmlJS(const Napi::CallbackInfo& info) : ObjectWrap(info) {
+xmlJS::xmlJS(const Napi::CallbackInfo& info) 
+  : ObjectWrap(info) {
   ARGS_CHECK(0)
-  this->data = std::make_unique<xmlPrs::Parser>();
   this->updateJsonNodes();
 
   this->commands.emplace("/getJSON" , [this](const Napi::CallbackInfo& info) -> std::string { return this->dataJSON; });
@@ -138,15 +137,15 @@ void printEdge(JSONArrayStream& edges, const std::size_t& from, const std::size_
   edges << s.str();
 };
 
-void xmlJS::updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::size_t& counter, const xmlPrs::TagHandler& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId) {
+void xmlJS::updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::size_t& counter, const xmlPrs::Tag& tag, const xmlNodePosition& parentPosition, const std::size_t& parentId) {
   xmlNodePosition position(parentPosition);
-  position.pathFromRoot.push_back(tag.GetTagName());
+  position.pathFromRoot.push_back(tag.getName());
   ++counter;
   this->nodesInfo.emplace(counter, position);
-  printTag(nodes, counter, tag.GetTagName());
+  printTag(nodes, counter, tag.getName());
   printEdge(edges, parentId, counter, true);
   std::size_t thisId = counter;
-  auto attributes = tag.GetAttributeAll();
+  const std::multimap<std::string, std::string>& attributes = tag.getAttributes();
   for(auto it= attributes.begin(); it!=attributes.end(); ++it){
     xmlNodePosition attrPos(position);
     attrPos.attributeName.set(it->first);
@@ -155,9 +154,9 @@ void xmlJS::updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::s
     printAttribute(nodes, counter, it->first, it->second);   
     printEdge(edges, thisId, counter, false);   
   }
-  auto nestedTags = tag.GetNestedAll();
+  xmlPrs::Tag::ConstIterator nestedTags = tag.getNestedAll();
   for(auto it= nestedTags.begin(); it!=nestedTags.end(); ++it){
-    this->updateJsonTag( nodes, edges, counter, *it, position, thisId);
+    this->updateJsonTag( nodes, edges, counter, *it->second, position, thisId);
   }
 }
 
@@ -167,11 +166,10 @@ void xmlJS::updateJsonNodes() {
   xmlNodePosition rootPosition;
   this->nodesInfo.emplace(counter, rootPosition);
   JSONArrayStream nodes, edges;
-  auto root = this->data->GetRoot();
-  printTag(nodes, 0, root.GetTagName());
-  auto rootNested = root.GetNestedAll();
+  printTag(nodes, 0, this->data.getRoot().getName());
+  auto rootNested = this->data.getRoot().getNestedAll();
   for(auto it = rootNested.begin(); it!=rootNested.end(); ++it){
-    this->updateJsonTag(nodes, edges, counter, *it, rootPosition, 0);
+    this->updateJsonTag(nodes, edges, counter, *it->second, rootPosition, 0);
   }
 
   std::stringstream json;
@@ -195,20 +193,19 @@ xmlJS::nodeType xmlJS::GetNodeType(const std::size_t& id) {
 }
 
 void xmlJS::Import(const std::string& fileName){
-  std::unique_ptr<xmlPrs::Parser> newStructure;
   try {
-    newStructure = std::make_unique<xmlPrs::Parser>(fileName);
+    xmlPrs::Parser newData(fileName);
+    this->data.getRoot() = std::move(newData.getRoot());
+    this->updateJsonNodes();
   }
   catch(...) {
     return;
   }
-  this->data = std::move(newStructure);
-  this->updateJsonNodes();
 }
 
 void xmlJS::Export(const std::string& fileName){
   try {
-    this->data->Reprint(fileName);
+    this->data.reprint(fileName);
   }
   catch(...) {
     return;
@@ -216,26 +213,27 @@ void xmlJS::Export(const std::string& fileName){
 }
 
 void xmlJS::Delete(const std::size_t& id){
-  std::cout << "---DEBUG: " << *this->data << std::endl;
+  // std::cout << "---DEBUG: " << *this->data << std::endl;
   if(id == 0) return;
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end()){
-    std::cout << "---DEBUG: " <<  it->second.pathFromRoot << std::endl;
+    // std::cout << "---DEBUG: " <<  it->second.pathFromRoot << std::endl;
 
-    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetTagName() << std::endl;
-    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNestedFirst("L1_1").GetTagName() << std::endl;
-    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0]}).GetTagName() << std::endl;
-    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0], it->second.pathFromRoot[1]}).GetTagName() << std::endl;
-    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0], it->second.pathFromRoot[1], it->second.pathFromRoot[2]}).GetTagName() << std::endl;
+    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetTagName() << std::endl;
+    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNestedFirst("L1_1").GetTagName() << std::endl;
+    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0]}).GetTagName() << std::endl;
+    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0], it->second.pathFromRoot[1]}).GetTagName() << std::endl;
+    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0], it->second.pathFromRoot[1], it->second.pathFromRoot[2]}).GetTagName() << std::endl;
 
-    auto tag = this->data->GetRoot().GetNested(it->second.pathFromRoot);
-    std::cout << "---DEBUG: " <<  tag.GetTagName() << std::endl;
+    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    // std::cout << "---DEBUG: " <<  tag.GetTagName() << std::endl;
     
     if(nullptr == it->second.attributeName) {
-      tag.Remove();
+      tag.remove();
     }
     else{
-      tag.RemoveAttribute( *it->second.attributeName);
+      auto itA = this->data.getRoot().getAttributes().find( *it->second.attributeName );
+      this->data.getRoot().getAttributes().erase(itA);
     }
     this->updateJsonNodes();
   }
@@ -244,12 +242,12 @@ void xmlJS::Delete(const std::size_t& id){
 void xmlJS::Rename(const std::size_t& id, const std::string& newName){
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end()){
-    auto tag = this->data->GetRoot().GetNested(it->second.pathFromRoot);
+    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
     if(nullptr == it->second.attributeName) {
-      tag.SetTagName(newName);
+      tag.setName(newName);
     }
     else{
-      tag.SetAttributeName(*it->second.attributeName, newName);
+      tag.setAttributeName(*it->second.attributeName, newName);
     }
     this->updateJsonNodes();
   }
@@ -258,8 +256,8 @@ void xmlJS::Rename(const std::size_t& id, const std::string& newName){
 void xmlJS::NestTag(const std::size_t& parentId, const std::string& tagName){
   auto it = this->nodesInfo.find(parentId);
   if(it != this->nodesInfo.end() && (nullptr == it->second.attributeName)){
-    auto tag = this->data->GetRoot().GetNested(it->second.pathFromRoot);
-    tag.AddNested(tagName);
+    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    tag.addNested(tagName);
     this->updateJsonNodes();
   }
 }
@@ -267,8 +265,8 @@ void xmlJS::NestTag(const std::size_t& parentId, const std::string& tagName){
 void xmlJS::NestAttribute(const std::size_t& parentId, const std::string& attrName){
   auto it = this->nodesInfo.find(parentId);
   if(it != this->nodesInfo.end() && (nullptr == it->second.attributeName)){
-    auto tag = this->data->GetRoot().GetNested(it->second.pathFromRoot);
-    tag.AddAttribute(attrName, "undefined");
+    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    tag.getAttributes().emplace(attrName, "undefined");
     this->updateJsonNodes();
   }
 }
@@ -276,9 +274,9 @@ void xmlJS::NestAttribute(const std::size_t& parentId, const std::string& attrNa
 void xmlJS::SetValue(const std::size_t& id, const std::string& value){
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end() && (nullptr != it->second.attributeName)){
-    auto tag = this->data->GetRoot().GetNested(it->second.pathFromRoot);
-    auto valOld = tag.GetAttributeValueFirst(*it->second.attributeName);
-    tag.SetAttributeValue(*it->second.attributeName, valOld, value);
+    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    auto r = tag.getAttributes().equal_range(*it->second.attributeName);
+    r.first->second = value;
     this->updateJsonNodes();
   }
 }
@@ -286,7 +284,6 @@ void xmlJS::SetValue(const std::size_t& id, const std::string& value){
 Napi::Object xmlJS::Init(Napi::Env env, Napi::Object exports) {
   Napi::HandleScope scope(env);
 
-  xmlPrs::UseThrowError();
   Napi::Function func = DefineClass(env, "xmlJS", {
     InstanceMethod("ProcessRequest", &xmlJS::ProcessRequest)
   });
