@@ -55,7 +55,7 @@
             let btn_Import = get_button("img/Import.svg", "Import new structure");
             C.appendChild(btn_Import);
             btn_Import.addEventListener("click" , function(){
-                let file_location = prompt("Enter the location of the file (pass null to create an empty structure)", "../Examples/Ex_02/XML_example_02.xml");
+                let file_location = prompt("Enter the location of the file (pass null to create an empty structure)", "./JS-xml-addon/XML-parser/Examples/Ex_01/XML_example_01.xml");
                 scene.sendCommand("import", JSON.stringify([file_location]));
             });
             

@@ -1,6 +1,18 @@
 #include "../xmlAddon.h"
 #include <ParserError.h>
+#include <iostream>
 using namespace Napi;
+
+/// DEBUG //////////////////////////////////////////////
+std::ostream& operator<<(std::ostream& s, const std::vector<std::string>& collection) {
+  JSONArrayStream arr;
+  for(std::size_t k=0; k<collection.size(); ++k){
+    arr << collection[k];
+  }
+  s << arr.reset();
+  return s;
+};
+////////////////////////////////////////////////////////
 
 #define COLOR_TAG "#0A5407"
 #define COLOR_ATTR "#A59407"
@@ -204,10 +216,21 @@ void xmlJS::Export(const std::string& fileName){
 }
 
 void xmlJS::Delete(const std::size_t& id){
+  std::cout << "---DEBUG: " << *this->data << std::endl;
   if(id == 0) return;
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end()){
+    std::cout << "---DEBUG: " <<  it->second.pathFromRoot << std::endl;
+
+    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetTagName() << std::endl;
+    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNestedFirst("L1_1").GetTagName() << std::endl;
+    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0]}).GetTagName() << std::endl;
+    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0], it->second.pathFromRoot[1]}).GetTagName() << std::endl;
+    std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0], it->second.pathFromRoot[1], it->second.pathFromRoot[2]}).GetTagName() << std::endl;
+
     auto tag = this->data->GetRoot().GetNested(it->second.pathFromRoot);
+    std::cout << "---DEBUG: " <<  tag.GetTagName() << std::endl;
+    
     if(nullptr == it->second.attributeName) {
       tag.Remove();
     }
