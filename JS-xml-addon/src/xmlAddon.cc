@@ -2,17 +2,6 @@
 #include <iostream>
 using namespace Napi;
 
-/// DEBUG //////////////////////////////////////////////
-std::ostream& operator<<(std::ostream& s, const std::vector<std::string>& collection) {
-  JSONArrayStream arr;
-  for(std::size_t k=0; k<collection.size(); ++k){
-    arr << collection[k];
-  }
-  s << arr.reset();
-  return s;
-};
-////////////////////////////////////////////////////////
-
 #define COLOR_TAG "#0A5407"
 #define COLOR_ATTR "#A59407"
 
@@ -38,8 +27,12 @@ xmlJS::xmlJS(const Napi::CallbackInfo& info)
   ARGS_CHECK(0)
   this->updateJsonNodes();
 
-  this->commands.emplace("/getJSON" , [this](const Napi::CallbackInfo& info) -> std::string { return this->dataJSON; });
+  this->commands.emplace("/getJSON" , [this](const Napi::CallbackInfo& info) -> std::string { 
+    std::cout << "processing getJSON" << std::endl;
+    return this->dataJSON; 
+  });
   this->commands.emplace("/getNodeType" , [this](const Napi::CallbackInfo& info) -> std::string { 
+    std::cout << "processing getNodeType" << std::endl;
     ARGS_CHECK(2)
     nodeType nodeT = this->GetNodeType(AS_SIZE_T(1));
     switch (nodeT) {
@@ -51,36 +44,43 @@ xmlJS::xmlJS(const Napi::CallbackInfo& info)
     return "n"; 
   });
   this->commands.emplace("/import" , [this](const Napi::CallbackInfo& info) -> std::string { 
+    std::cout << "processing import" << std::endl;
     ARGS_CHECK(2)
     this->Import(AS_STRING(1));
     return this->dataJSON; 
   });
   this->commands.emplace("/export" , [this](const Napi::CallbackInfo& info) -> std::string { 
+    std::cout << "processing export" << std::endl;
     ARGS_CHECK(2)
     this->Export(AS_STRING(1)); 
     return ""; 
   });
   this->commands.emplace("/delete" , [this](const Napi::CallbackInfo& info) -> std::string { 
+    std::cout << "processing delete" << std::endl;
     ARGS_CHECK(2)
     this->Delete(AS_SIZE_T(1));
     return this->dataJSON; 
   });
   this->commands.emplace("/rename" , [this](const Napi::CallbackInfo& info) -> std::string { 
+    std::cout << "processing rename" << std::endl;
     ARGS_CHECK(3)
     this->Rename(AS_SIZE_T(1), AS_STRING(2));
     return this->dataJSON; 
   });
   this->commands.emplace("/nestTag" , [this](const Napi::CallbackInfo& info) -> std::string { 
+    std::cout << "processing nestTag" << std::endl;
     ARGS_CHECK(3)
     this->NestTag(AS_SIZE_T(1), AS_STRING(2));
     return this->dataJSON; 
   });
   this->commands.emplace("/nestAttribute" , [this](const Napi::CallbackInfo& info) -> std::string { 
+    std::cout << "processing nestAttribute" << std::endl;
     ARGS_CHECK(3)
     this->NestAttribute(AS_SIZE_T(1), AS_STRING(2));
     return this->dataJSON; 
   });
   this->commands.emplace("/setValue" , [this](const Napi::CallbackInfo& info) -> std::string { 
+    std::cout << "processing setValue" << std::endl;
     ARGS_CHECK(3)
     this->SetValue(AS_SIZE_T(1), AS_STRING(2));
     return this->dataJSON; 
@@ -182,20 +182,30 @@ void xmlJS::updateJsonNodes() {
 }
 
 xmlJS::nodeType xmlJS::GetNodeType(const std::size_t& id) {
+  nodeType result = nodeType::undefined;
   auto it = this->nodesInfo.find(id);
-  if(it == this->nodesInfo.end()){
-    return nodeType::undefined;
+  if(it!=this->nodesInfo.end()) {
+    if(nullptr == it->second.attributeName) {
+      result = nodeType::tag;
+      std::cout << "is a tag" << std::endl;
+    }
+    else{
+      result = nodeType::attribute;
+      std::cout << "is an attribute" << std::endl;
+    }
   }
-  if(nullptr == it->second.attributeName) {
-    return nodeType::tag;
+  else {
+    std::cout << "undefined node type" << std::endl;
   }
-  return nodeType::attribute;
+  return result;
 }
 
 void xmlJS::Import(const std::string& fileName){
   try {
+    std::cout << "importing " << fileName << std::endl;
     xmlPrs::Parser newData(fileName);
-    this->data.getRoot() = std::move(newData.getRoot());
+    std::cout << "success" << std::endl;
+    this->data = std::move(newData);
     this->updateJsonNodes();
   }
   catch(...) {
@@ -205,7 +215,9 @@ void xmlJS::Import(const std::string& fileName){
 
 void xmlJS::Export(const std::string& fileName){
   try {
+    std::cout << "exporting " << fileName << std::endl;
     this->data.reprint(fileName);
+    std::cout << "success" << std::endl;
   }
   catch(...) {
     return;
@@ -213,30 +225,26 @@ void xmlJS::Export(const std::string& fileName){
 }
 
 void xmlJS::Delete(const std::size_t& id){
-  // std::cout << "---DEBUG: " << *this->data << std::endl;
-  if(id == 0) return;
+  if(id == 0) {
+    std::cout << "request to delete root refused" << std::endl;
+    return;
+  }
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end()){
-    // std::cout << "---DEBUG: " <<  it->second.pathFromRoot << std::endl;
-
-    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetTagName() << std::endl;
-    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNestedFirst("L1_1").GetTagName() << std::endl;
-    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0]}).GetTagName() << std::endl;
-    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0], it->second.pathFromRoot[1]}).GetTagName() << std::endl;
-    // std::cout << "---DEBUG: " <<  this->data->GetRoot().GetNested(std::vector<std::string>{it->second.pathFromRoot[0], it->second.pathFromRoot[1], it->second.pathFromRoot[2]}).GetTagName() << std::endl;
-
     auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
-    // std::cout << "---DEBUG: " <<  tag.GetTagName() << std::endl;
-    
     if(nullptr == it->second.attributeName) {
+      std::cout << "deleting tag " << tag.getName() << std::endl;
       tag.remove();
     }
     else{
+      std::cout << "deleting attribute " << *it->second.attributeName << std::endl;
       auto itA = this->data.getRoot().getAttributes().find( *it->second.attributeName );
       this->data.getRoot().getAttributes().erase(itA);
     }
     this->updateJsonNodes();
+    return;
   }
+  std::cout << "delete undefined node" << std::endl;
 }
 
 void xmlJS::Rename(const std::size_t& id, const std::string& newName){
@@ -244,41 +252,54 @@ void xmlJS::Rename(const std::size_t& id, const std::string& newName){
   if(it != this->nodesInfo.end()){
     auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
     if(nullptr == it->second.attributeName) {
+      std::cout << "renaming tag " << tag.getName() << std::endl;
       tag.setName(newName);
     }
     else{
+      std::cout << "renaming attribute " << *it->second.attributeName << std::endl;
       tag.setAttributeName(*it->second.attributeName, newName);
     }
     this->updateJsonNodes();
+    return;
   }
+  std::cout << "rename undefined node" << std::endl;
 }
 
 void xmlJS::NestTag(const std::size_t& parentId, const std::string& tagName){
   auto it = this->nodesInfo.find(parentId);
   if(it != this->nodesInfo.end() && (nullptr == it->second.attributeName)){
     auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    std::cout << "nest tag to tag " << tag.getName() << std::endl;
     tag.addNested(tagName);
     this->updateJsonNodes();
+    return;
   }
+  std::cout << "nest tag to undefined node" << std::endl;
 }
 
 void xmlJS::NestAttribute(const std::size_t& parentId, const std::string& attrName){
   auto it = this->nodesInfo.find(parentId);
   if(it != this->nodesInfo.end() && (nullptr == it->second.attributeName)){
     auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    std::cout << "nest attribute to tag " << tag.getName() << std::endl;
     tag.getAttributes().emplace(attrName, "undefined");
     this->updateJsonNodes();
+    return;
   }
+  std::cout << "nest attribute to undefined node" << std::endl;
 }
 
 void xmlJS::SetValue(const std::size_t& id, const std::string& value){
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end() && (nullptr != it->second.attributeName)){
     auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    std::cout << "set value of attribute in tag " << tag.getName() << std::endl;
     auto r = tag.getAttributes().equal_range(*it->second.attributeName);
     r.first->second = value;
     this->updateJsonNodes();
+    return;
   }
+  std::cout << "set value of undefined node" << std::endl;
 }
 
 Napi::Object xmlJS::Init(Napi::Env env, Napi::Object exports) {
