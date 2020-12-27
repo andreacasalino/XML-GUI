@@ -7,7 +7,10 @@ The application is made of 2 big components:
 * **Backend**, contained in **XML-GUI.js** 
 
 **Install**:
- 
+
+* initialize the git submodule with the 2 commands (from root) 
+  * `git submodule init`
+  * `git submodule update --recursive --remote`
 * run `npm install` from the JS-xml-addon folder, to build and create a node-js addon wrapping [XML-parser](https://github.com/andreacasalino/XML-parser), a C++ library handling xml.
 
 **Run**:
