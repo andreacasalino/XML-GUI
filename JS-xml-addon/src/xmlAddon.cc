@@ -3,6 +3,7 @@
 using namespace Napi;
 
 #define COLOR_TAG "#0A5407"
+#define COLOR_TAG_ROOT "#D26C00"
 #define COLOR_ATTR "#A59407"
 
 #define ARGS_CHECK(NUMBERS_EXPECTED) \
@@ -103,10 +104,17 @@ Napi::Value xmlJS::ProcessRequest(const Napi::CallbackInfo& info){
   return Napi::String::New(env, it->second(info).c_str());
 }
 
-void printTag(JSONArrayStream& nodes, const std::size_t& counter, const std::string& name){
+void printTag(JSONArrayStream& nodes, const std::size_t& counter, const std::string& name, const bool& isRoot = false){
   std::stringstream s;
   s << "{\"label\":\"<" << name << ">\"";
-  s << ",\"color\":\"" << COLOR_TAG << "\"";
+  s << ",\"color\":\"";
+  if(isRoot){
+    s << COLOR_TAG_ROOT;
+  }
+  else{
+    s << COLOR_TAG;
+  }
+  s << "\"";
   s << ",\"id\":\"" << counter << "\"";
   s << "}";
   nodes << s.str();
@@ -166,7 +174,16 @@ void xmlJS::updateJsonNodes() {
   xmlNodePosition rootPosition;
   this->nodesInfo.emplace(counter, rootPosition);
   JSONArrayStream nodes, edges;
-  printTag(nodes, 0, this->data.getRoot().getName());
+  printTag(nodes, 0, this->data.getRoot().getName(), true);
+  const std::multimap<std::string, std::string>& attributes = this->data.getRoot().getAttributesConst();
+  for(auto it= attributes.begin(); it!=attributes.end(); ++it){
+    xmlNodePosition attrPos(rootPosition);
+    attrPos.attributeName.set(it->first);
+    ++counter;
+    this->nodesInfo.emplace(counter, attrPos);
+    printAttribute(nodes, counter, it->first, it->second);   
+    printEdge(edges, 0, counter, false);   
+  }
   xmlPrs::Tag::ConstIterator rootNested = this->data.getRoot().getNestedAllConst();
   for(auto it = rootNested.begin(); it!=rootNested.end(); ++it){
     this->updateJsonTag(nodes, edges, counter, *it->second, rootPosition, 0);
