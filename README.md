@@ -1,6 +1,6 @@
-This simple application allows to read and modify xml files.
+This application allows to **import**, **modify** and **export** **xml** structures.
 The application is cross-platform but you should have on your system
-Node.js (https://nodejs.org/en/) and npm (https://www.npmjs.com/get-npm).
+[NodeJS](https://nodejs.org/en/) and npm (https://www.npmjs.com/get-npm).
 The frontend of the application is XML-GUI.html, backend is XML-GUI.js 
 
 Install:
