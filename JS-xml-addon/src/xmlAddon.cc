@@ -145,7 +145,7 @@ void xmlJS::updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::s
   printTag(nodes, counter, tag.getName());
   printEdge(edges, parentId, counter, true);
   std::size_t thisId = counter;
-  const std::multimap<std::string, std::string>& attributes = tag.getAttributes();
+  const std::multimap<std::string, std::string>& attributes = tag.getAttributesConst();
   for(auto it= attributes.begin(); it!=attributes.end(); ++it){
     xmlNodePosition attrPos(position);
     attrPos.attributeName.set(it->first);
@@ -154,7 +154,7 @@ void xmlJS::updateJsonTag(JSONArrayStream& nodes, JSONArrayStream& edges, std::s
     printAttribute(nodes, counter, it->first, it->second);   
     printEdge(edges, thisId, counter, false);   
   }
-  xmlPrs::Tag::ConstIterator nestedTags = tag.getNestedAll();
+  xmlPrs::Tag::ConstIterator nestedTags = tag.getNestedAllConst();
   for(auto it= nestedTags.begin(); it!=nestedTags.end(); ++it){
     this->updateJsonTag( nodes, edges, counter, *it->second, position, thisId);
   }
@@ -167,7 +167,7 @@ void xmlJS::updateJsonNodes() {
   this->nodesInfo.emplace(counter, rootPosition);
   JSONArrayStream nodes, edges;
   printTag(nodes, 0, this->data.getRoot().getName());
-  auto rootNested = this->data.getRoot().getNestedAll();
+  xmlPrs::Tag::ConstIterator rootNested = this->data.getRoot().getNestedAllConst();
   for(auto it = rootNested.begin(); it!=rootNested.end(); ++it){
     this->updateJsonTag(nodes, edges, counter, *it->second, rootPosition, 0);
   }
@@ -231,7 +231,7 @@ void xmlJS::Delete(const std::size_t& id){
   }
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end()){
-    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    xmlPrs::Tag& tag = this->data.getRoot().getNested(it->second.pathFromRoot);
     if(nullptr == it->second.attributeName) {
       std::cout << "deleting tag " << tag.getName() << std::endl;
       tag.remove();
@@ -250,7 +250,7 @@ void xmlJS::Delete(const std::size_t& id){
 void xmlJS::Rename(const std::size_t& id, const std::string& newName){
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end()){
-    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    xmlPrs::Tag& tag = this->data.getRoot().getNested(it->second.pathFromRoot);
     if(nullptr == it->second.attributeName) {
       std::cout << "renaming tag " << tag.getName() << std::endl;
       tag.setName(newName);
@@ -268,8 +268,8 @@ void xmlJS::Rename(const std::size_t& id, const std::string& newName){
 void xmlJS::NestTag(const std::size_t& parentId, const std::string& tagName){
   auto it = this->nodesInfo.find(parentId);
   if(it != this->nodesInfo.end() && (nullptr == it->second.attributeName)){
-    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
-    std::cout << "nest tag to tag " << tag.getName() << std::endl;
+    xmlPrs::Tag& tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    std::cout << "nest tag " << tagName << " to tag " << tag.getName() << std::endl;
     tag.addNested(tagName);
     this->updateJsonNodes();
     return;
@@ -280,8 +280,8 @@ void xmlJS::NestTag(const std::size_t& parentId, const std::string& tagName){
 void xmlJS::NestAttribute(const std::size_t& parentId, const std::string& attrName){
   auto it = this->nodesInfo.find(parentId);
   if(it != this->nodesInfo.end() && (nullptr == it->second.attributeName)){
-    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
-    std::cout << "nest attribute to tag " << tag.getName() << std::endl;
+    xmlPrs::Tag& tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    std::cout << "nest attribute " << attrName << " to tag " << tag.getName() << std::endl;
     tag.getAttributes().emplace(attrName, "undefined");
     this->updateJsonNodes();
     return;
@@ -292,7 +292,7 @@ void xmlJS::NestAttribute(const std::size_t& parentId, const std::string& attrNa
 void xmlJS::SetValue(const std::size_t& id, const std::string& value){
   auto it = this->nodesInfo.find(id);
   if(it != this->nodesInfo.end() && (nullptr != it->second.attributeName)){
-    auto tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    xmlPrs::Tag& tag = this->data.getRoot().getNested(it->second.pathFromRoot);
     std::cout << "set value of attribute in tag " << tag.getName() << std::endl;
     auto r = tag.getAttributes().equal_range(*it->second.attributeName);
     r.first->second = value;

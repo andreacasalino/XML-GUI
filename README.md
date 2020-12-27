@@ -9,5 +9,5 @@ wrapping the backend C++ library handling xml structures (https://github.com/and
 
 Run:
 enter in the terminal from the root folder 'node XML-GUI.js'
-open your favourite browser and go to the address 'http://localhost:3000'
+, then open your favourite browser and go to the address 'http://localhost:3000'
 
