@@ -8,10 +8,10 @@ The application is made of 2 big components:
 
 **Install**:
  
-* run 'npm install' from the JS-xml-addon folder, to build and create a node-js addon wrapping [XML-parser](https://github.com/andreacasalino/XML-parser), a C++ library handling xml.
+* run `npm install` from the JS-xml-addon folder, to build and create a node-js addon wrapping [XML-parser](https://github.com/andreacasalino/XML-parser), a C++ library handling xml.
 
 **Run**:
 
-* enter in the terminal from the root folder 'node XML-GUI.js'
+* enter in the terminal from the root folder `node XML-GUI.js`
 * open your favourite browser and go to the address 'http://localhost:3000'
 
