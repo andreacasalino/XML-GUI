@@ -18,3 +18,5 @@ The application is made of 2 big components:
 * enter in the terminal from the root folder `node XML-GUI.js`
 * open your favourite browser and go to the address 'http://localhost:3000'
 
+![What you should see when running the application](https://github.com/andreacasalino/XML-GUI/blob/master/Example.png)
+
