@@ -12,6 +12,9 @@ The application is made of 2 big components:
 
 * install on your machine [NodeJS](https://nodejs.org/en/) and [npm](https://www.npmjs.com/get-npm)
 
+* get [cmake-js](https://www.npmjs.com/package/cmake-js) using [npm](https://www.npmjs.com/get-npm) by running the following command:
+  * `npm install -g cmake-js`
+
 * initialize the git submodule with the 2 commands (from root) 
   * `git submodule init`
   * `git submodule update --recursive --remote`
