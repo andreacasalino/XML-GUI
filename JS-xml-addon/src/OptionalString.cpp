@@ -1,4 +1,5 @@
 #include "OptionalString.h"
+#include <stdexcept>
 
 OptionalString::OptionalString(const OptionalString& o) {
   *this = o;

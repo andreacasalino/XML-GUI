@@ -4,7 +4,9 @@ set (CMAKE_CXX_STANDARD 17)
 
 project (xml-addon)
 
-set(LIB_OPT ON)
+if(NOT WIN32)
+set(LIB_OPT ON) #linux uses shared libraries, while windows uses static ones
+endif()
 # set macro-directory and find scripts
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/XML-parser/cmake/")
 # include cmake custom functions
