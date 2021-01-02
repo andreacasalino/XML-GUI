@@ -10,6 +10,8 @@ The application is made of 2 big components:
 
 **Install**:
 
+* install on your machine [NodeJS](https://nodejs.org/en/) and [npm](https://www.npmjs.com/get-npm)
+
 * initialize the git submodule with the 2 commands (from root) 
   * `git submodule init`
   * `git submodule update --recursive --remote`
