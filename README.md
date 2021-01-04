@@ -7,7 +7,7 @@ The application is made of 2 big components:
 * **Frontend**, an **html** script represented by **XML-GUI.html**
 * **Backend**, a **C++** application that can be compiled using [Cmake](https://cmake.org) which wraps [XML-parser](https://github.com/andreacasalino/XML-parser) to handle operations on **xml**
 
-**Install**:
+**Compile**:
 
 * initialize the git submodule with the 2 commands (from root) 
   * `git submodule init`
