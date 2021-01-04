@@ -14,7 +14,7 @@ The application is made of 2 big components:
   * `git submodule update --recursive --remote`
 
 * compile the [Cmake](https://cmake.org) project
-  * after a backend application named **XML-GUI** will be appear in root/App
+  * after that, a backend application named **XML-GUI** will be appear in root/App
 
 **Run**:
 
