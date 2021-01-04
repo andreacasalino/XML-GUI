@@ -1,3 +1,6 @@
-[submodule "JS-xml-addon/XML-parser"]
-	path = JS-xml-addon/XML-parser
-	url = https://github.com/andreacasalino/XML-parser
+[submodule "src/Http-GUI"]
+	path = src/Http-GUI
+	url = https://github.com/andreacasalino/Http-GUI
+[submodule "src/XML-parser"]
+	path = src/XML-parser
+	url = https://github.com/andreacasalino/XML-parser.git
