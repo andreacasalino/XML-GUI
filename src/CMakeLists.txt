@@ -1,5 +1,19 @@
-add_subdirectory(Http-GUI/Lib)
-add_subdirectory(XML-parser/Lib)
+SET(BUILD_XML_Parser_SAMPLES OFF CACHE BOOL "Override xml parser sample option" FORCE)
+include(FetchContent)
+FetchContent_Declare(
+  xml_parser
+  GIT_REPOSITORY https://github.com/andreacasalino/XML-parser.git
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(xml_parser)
+
+include(FetchContent)
+FetchContent_Declare(
+  http_lib
+  GIT_REPOSITORY https://github.com/andreacasalino/Http-GUI.git
+  GIT_TAG        master
+)
+FetchContent_MakeAvailable(http_lib)
 
 add_executable(XML-GUI 
 XML-GUI.cpp 
@@ -12,8 +26,8 @@ src/XML-model.cpp
 target_include_directories(XML-GUI PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(XML-GUI PUBLIC
-gui::Http-GUI
-XMLPrs::XML-Parser
+Http-GUI
+XML-Parser
 )
 
 if(WIN32)
