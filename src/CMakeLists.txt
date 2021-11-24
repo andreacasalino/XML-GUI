@@ -40,3 +40,7 @@ else()
 	)
 endif()
 
+target_compile_definitions(XML-GUI 
+PUBLIC
+  -D EXAMPLE_FOLDER="${FETCHCONTENT_BASE_DIR}/xml_parser-src/Examples/"
+)
