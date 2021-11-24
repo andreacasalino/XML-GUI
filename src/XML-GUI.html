@@ -55,8 +55,10 @@
             let btn_Import = get_button("img/Import.svg", "Import new structure");
             C.appendChild(btn_Import);
             btn_Import.addEventListener("click" , function(){
-                let file_location = prompt("Enter the location of the file w.r.t the server application", "../src/XML-parser/Examples/Ex_01/XML_example_01.xml");
-                scene.sendCommand("import", [file_location]);
+                scene.sendCommand("default_example", [], (default_example) => {
+                    let file_location = prompt("Enter the location of the file w.r.t the server application", default_example);
+                    scene.sendCommand("import", [file_location]);
+                });
             });
             
             let btn_Export = get_button("img/Export.svg", "Save the actual structure");
