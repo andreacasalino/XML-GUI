@@ -9,13 +9,13 @@ The application is made of 2 big components:
 
 **Compile**:
 
-* compile the [Cmake](https://cmake.org) project
- 
-* run the install target and after that, a backend application named **XML-GUI** will be appear in installation folder, together with the required frontend material
+* compile the [Cmake](https://cmake.org) project an run the **INSTALL** command
+  * after that, the backend application named **XML-GUI** will be appear in the installation folder, under bin
 
 **Run**:
 
-* got to the installation folder and launch the backend application **XML-GUI**
+* got to the installation folder and then inside bin.
+* run the application named **XML-GUI**
 * open in your favourite browser the script **XML-GUI.html**
 * have fun with the GUI :)
 
