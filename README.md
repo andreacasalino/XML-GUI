@@ -9,16 +9,13 @@ The application is made of 2 big components:
 
 **Compile**:
 
-* initialize the git submodule with the 2 commands (from root) 
-  * `git submodule init`
-  * `git submodule update --recursive --remote`
-
 * compile the [Cmake](https://cmake.org) project
-  * after that, a backend application named **XML-GUI** will be appear in root/App
+ 
+* run the install target and after that, a backend application named **XML-GUI** will be appear in installation folder, together with the required frontend material
 
 **Run**:
 
-* got to root/App and launch the backend application **XML-GUI**
+* got to the installation folder and launch the backend application **XML-GUI**
 * open in your favourite browser the script **XML-GUI.html**
 * have fun with the GUI :)
 
