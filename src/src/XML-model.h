@@ -28,12 +28,12 @@ public:
 
 private:
   struct xmlNodePosition {
-    std::vector<std::string> pathFromRoot;
+    std::vector<xmlPrs::Name> pathFromRoot;
     OptionalString attributeName; // empty for tag
   };
   void updateJsonNodes();
   void updateJsonTag(gui::json::arrayJSON &nodes, gui::json::arrayJSON &edges,
-                     std::size_t &counter, const xmlPrs::Tag &tag,
+                     std::size_t &counter, const xmlPrs::Tag& tag, const std::string& tag_name,
                      const xmlNodePosition &parentPosition,
                      const std::size_t &parentId);
 

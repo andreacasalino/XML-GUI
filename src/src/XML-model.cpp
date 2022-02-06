@@ -1,5 +1,6 @@
 #include <XML-model.h>
 #include <iostream>
+#include <fstream>
 
 #define COLOR_TAG "#0A5407"
 #define COLOR_TAG_ROOT "#D26C00"
@@ -44,32 +45,29 @@ void printEdge(gui::json::arrayJSON &edges, const std::size_t &from,
   edges.addElement(s);
 };
 
-void XML_model::updateJsonTag(gui::json::arrayJSON &nodes,
-                              gui::json::arrayJSON &edges, std::size_t &counter,
-                              const xmlPrs::Root &tag,
-                              const xmlNodePosition &parentPosition,
-                              const std::size_t &parentId) {
-  xmlNodePosition position(parentPosition);
-  position.pathFromRoot.push_back(tag.getName());
-  ++counter;
-  this->nodesInfo.emplace(counter, position);
-  printTag(nodes, counter, tag.getName());
-  printEdge(edges, parentId, counter, true);
-  std::size_t thisId = counter;
-  const std::multimap<std::string, std::string> &attributes =
-      tag.getAttributesConst();
-  for (auto it = attributes.begin(); it != attributes.end(); ++it) {
-    xmlNodePosition attrPos(position);
-    attrPos.attributeName.set(it->first);
+void XML_model::updateJsonTag(gui::json::arrayJSON& nodes, gui::json::arrayJSON& edges,
+    std::size_t& counter, const xmlPrs::Tag& tag, const std::string& tag_name,
+    const xmlNodePosition& parentPosition,
+    const std::size_t& parentId) {
+    xmlNodePosition position(parentPosition);
+    position.pathFromRoot.push_back(tag_name);
     ++counter;
-    this->nodesInfo.emplace(counter, attrPos);
-    printAttribute(nodes, counter, it->first, it->second);
-    printEdge(edges, thisId, counter, false);
-  }
-  xmlPrs::Tag::ConstIterator nestedTags = tag.getNestedAllConst();
-  for (auto it = nestedTags.begin(); it != nestedTags.end(); ++it) {
-    this->updateJsonTag(nodes, edges, counter, *it->second, position, thisId);
-  }
+    this->nodesInfo.emplace(counter, position);
+    printTag(nodes, counter, tag_name);
+    printEdge(edges, parentId, counter, true);
+    std::size_t thisId = counter;
+    const auto& attributes = tag.getAttributes();
+    for (auto it = attributes.begin(); it != attributes.end(); ++it) {
+        xmlNodePosition attrPos(position);
+        attrPos.attributeName.set(it->first);
+        ++counter;
+        this->nodesInfo.emplace(counter, attrPos);
+        printAttribute(nodes, counter, it->first, it->second);
+        printEdge(edges, thisId, counter, false);
+    }
+    for (const auto& [name, nested] : tag.getNested()) {
+        this->updateJsonTag(nodes, edges, counter, *nested, name, position, thisId);
+    }
 }
 
 void XML_model::updateJsonNodes() {
@@ -78,9 +76,8 @@ void XML_model::updateJsonNodes() {
   xmlNodePosition rootPosition;
   this->nodesInfo.emplace(counter, rootPosition);
   gui::json::arrayJSON nodes, edges;
-  printTag(nodes, 0, this->data.getRoot().getName(), true);
-  const std::multimap<std::string, std::string> &attributes =
-      this->data.getRoot().getAttributesConst();
+  printTag(nodes, 0, this->root.getName(), true);
+  const auto& attributes = root.getAttributes();
   for (auto it = attributes.begin(); it != attributes.end(); ++it) {
     xmlNodePosition attrPos(rootPosition);
     attrPos.attributeName.set(it->first);
@@ -89,12 +86,9 @@ void XML_model::updateJsonNodes() {
     printAttribute(nodes, counter, it->first, it->second);
     printEdge(edges, 0, counter, false);
   }
-  xmlPrs::Tag::ConstIterator rootNested =
-      this->data.getRoot().getNestedAllConst();
-  for (auto it = rootNested.begin(); it != rootNested.end(); ++it) {
-    this->updateJsonTag(nodes, edges, counter, *it->second, rootPosition, 0);
+  for (const auto& [name, nested] : root.getNested()) {
+      this->updateJsonTag(nodes, edges, counter, *nested, name, rootPosition, 0);
   }
-
   gui::json::structJSON json;
   json.addElement("nodes", nodes);
   json.addElement("edges", edges);
@@ -131,9 +125,14 @@ std::string XML_model::Import(const gui::RequestOptions &opt) {
   FIND_OPT_O(this->GetJSON())
   try {
     std::cout << "importing " << itOpt->second[0] << std::endl;
-    xmlPrs::Parser newData(itOpt->second[0]);
+    auto new_data = xmlPrs::parse_xml(itOpt->second[0]);
+    if (std::get_if<xmlPrs::Error>(&new_data) != nullptr) {
+        throw std::get<xmlPrs::Error>(new_data);
+    }
     std::cout << "success" << std::endl;
-    this->data = std::move(newData);
+    auto& as_root = std::get<xmlPrs::Root>(new_data);
+    this->root.setName(as_root.getName());
+    this->root = std::move(as_root);
     this->updateJsonNodes();
   } catch (...) {
   }
@@ -144,7 +143,8 @@ void XML_model::Export(const gui::RequestOptions &opt) {
   FIND_OPT_O()
   try {
     std::cout << "exporting " << itOpt->second[0] << std::endl;
-    this->data.reprint(itOpt->second[0]);
+    std::ofstream stream(itOpt->second[0]);
+    stream << this->root;
     std::cout << "success" << std::endl;
   } catch (...) {
     return;
@@ -160,16 +160,15 @@ std::string XML_model::Delete(const gui::RequestOptions &opt) {
   }
   auto it = this->nodesInfo.find(id);
   if (it != this->nodesInfo.end()) {
-    xmlPrs::Tag &tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    auto &tag = this->root.getDescendant(it->second.pathFromRoot);
     if (nullptr == it->second.attributeName) {
-      std::cout << "deleting tag " << tag.getName() << std::endl;
+      std::cout << "deleting tag " << it->second.pathFromRoot.back() << std::endl;
       tag.remove();
     } else {
       std::cout << "deleting attribute " << *it->second.attributeName
                 << std::endl;
-      auto itA =
-          this->data.getRoot().getAttributes().find(*it->second.attributeName);
-      this->data.getRoot().getAttributes().erase(itA);
+      auto itA = tag.getAttributes().find(*it->second.attributeName);
+      tag.getAttributes().erase(itA);
     }
     this->updateJsonNodes();
     return this->GetJSON();
@@ -185,14 +184,19 @@ std::string XML_model::Rename(const gui::RequestOptions &opt) {
   std::size_t id = std::atoi(itOpt->second[0].c_str());
   auto it = this->nodesInfo.find(id);
   if (it != this->nodesInfo.end()) {
-    xmlPrs::Tag &tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    auto& tag = this->root.getDescendant(it->second.pathFromRoot);
     if (nullptr == it->second.attributeName) {
-      std::cout << "renaming tag " << tag.getName() << std::endl;
-      tag.setName(itOpt->second[1]);
+      std::cout << "renaming tag " << it->second.pathFromRoot.back() << std::endl;
+      tag.rename(itOpt->second[1]);
     } else {
       std::cout << "renaming attribute " << *it->second.attributeName
                 << std::endl;
-      tag.setAttributeName(*it->second.attributeName, itOpt->second[1]);
+      auto rangeA = tag.getAttributes().equal_range(*it->second.attributeName);
+      for (auto itA = rangeA.first; itA != rangeA.second; ++itA) {
+          const std::string attr_val = itA->second;
+          tag.getAttributes().erase(itA);
+          tag.getAttributes().emplace(itOpt->second[1], attr_val);
+      }
     }
     this->updateJsonNodes();
     return this->GetJSON();
@@ -208,8 +212,8 @@ std::string XML_model::NestTag(const gui::RequestOptions &opt) {
   std::size_t parentId = std::atoi(itOpt->second[0].c_str());
   auto it = this->nodesInfo.find(parentId);
   if (it != this->nodesInfo.end() && (nullptr == it->second.attributeName)) {
-    xmlPrs::Tag &tag = this->data.getRoot().getNested(it->second.pathFromRoot);
-    std::cout << "nest tag " << itOpt->second[1] << " to tag " << tag.getName()
+    auto& tag = this->root.getDescendant(it->second.pathFromRoot);
+    std::cout << "nest tag " << itOpt->second[1] << " to tag " << it->second.pathFromRoot.back()
               << std::endl;
     tag.addNested(itOpt->second[1]);
     this->updateJsonNodes();
@@ -226,9 +230,9 @@ std::string XML_model::NestAttribute(const gui::RequestOptions &opt) {
   std::size_t parentId = std::atoi(itOpt->second[0].c_str());
   auto it = this->nodesInfo.find(parentId);
   if (it != this->nodesInfo.end() && (nullptr == it->second.attributeName)) {
-    xmlPrs::Tag &tag = this->data.getRoot().getNested(it->second.pathFromRoot);
+    auto& tag = this->root.getDescendant(it->second.pathFromRoot);
     std::cout << "nest attribute " << itOpt->second[1] << " to tag "
-              << tag.getName() << std::endl;
+              << it->second.pathFromRoot.back() << std::endl;
     tag.getAttributes().emplace(itOpt->second[1], "undefined");
     this->updateJsonNodes();
     return this->GetJSON();
@@ -244,10 +248,10 @@ std::string XML_model::SetValue(const gui::RequestOptions &opt) {
   std::size_t id = std::atoi(itOpt->second[0].c_str());
   auto it = this->nodesInfo.find(id);
   if (it != this->nodesInfo.end() && (nullptr != it->second.attributeName)) {
-    xmlPrs::Tag &tag = this->data.getRoot().getNested(it->second.pathFromRoot);
-    std::cout << "set value of attribute in tag " << tag.getName() << std::endl;
-    auto r = tag.getAttributes().equal_range(*it->second.attributeName);
-    r.first->second = itOpt->second[1];
+    auto& tag = this->root.getDescendant(it->second.pathFromRoot);
+    std::cout << "set value of attribute in tag " << it->second.pathFromRoot.back() << std::endl;
+    auto itA = tag.getAttributes().find(*it->second.attributeName);
+    itA->second = itOpt->second[1];
     this->updateJsonNodes();
     return this->GetJSON();
   }
