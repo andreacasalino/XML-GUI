@@ -1,10 +1,7 @@
-#include <JSONstream.h>
-#include <OptionalString.h>
-#include <RequestOptions.h>
-#include <XML-Parser/Parser.h>
-#include <functional>
+#include <HttpGui/Server.h>
+#include <XML-Parser/Tag.h>
 
-class XML_model {
+class XML_model : public gui::Server {
 public:
   XML_model();
 
@@ -33,12 +30,13 @@ private:
   };
   void updateJsonNodes();
   void updateJsonTag(gui::json::arrayJSON &nodes, gui::json::arrayJSON &edges,
-                     std::size_t &counter, const xmlPrs::Tag& tag, const std::string& tag_name,
+                     std::size_t &counter, const xmlPrs::Tag &tag,
+                     const std::string &tag_name,
                      const xmlNodePosition &parentPosition,
                      const std::size_t &parentId);
 
   // data
-  xmlPrs::Root root;
+  xmlPrs::Root xml_model;
   std::map<std::size_t, xmlNodePosition> nodesInfo;
   std::string dataJSON;
 };
