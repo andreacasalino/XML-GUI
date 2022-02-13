@@ -1,260 +1,269 @@
-#include <XML-model.h>
-#include <iostream>
+#include <XML-Server.h>
+#include <XML-Parser/Parser.h>
 #include <fstream>
+#include <sstream>
 
-#define COLOR_TAG "#0A5407"
-#define COLOR_TAG_ROOT "#D26C00"
-#define COLOR_ATTR "#A59407"
-
-XML_model::XML_model() { this->updateJsonNodes(); }
-
-void printTag(gui::json::arrayJSON &nodes, const std::size_t &counter,
-              const std::string &name, const bool &isRoot = false) {
-  gui::json::structJSON s;
-  s.addElement("label", gui::json::String("<" + name + ">"));
-  if (isRoot) {
-    s.addElement("color", gui::json::String(COLOR_TAG_ROOT));
-  } else {
-    s.addElement("color", gui::json::String(COLOR_TAG));
-  }
-  s.addElement("id", gui::json::String(std::to_string(counter)));
-  nodes.addElement(s);
-};
-
-void printAttribute(gui::json::arrayJSON &nodes, const std::size_t &counter,
-                    const std::string &name, const std::string &value) {
-  gui::json::structJSON s;
-  s.addElement("label", gui::json::String(name + "=" + value));
-  s.addElement("color", gui::json::String(COLOR_ATTR));
-  s.addElement("id", gui::json::String(std::to_string(counter)));
-  s.addElement("shape", gui::json::String("box"));
-  nodes.addElement(s);
-};
-
-void printEdge(gui::json::arrayJSON &edges, const std::size_t &from,
-               const std::size_t &to, const bool &leads2Tag) {
-  gui::json::structJSON s;
-  s.addElement("from", gui::json::String(std::to_string(from)));
-  s.addElement("to", gui::json::String(std::to_string(to)));
-  if (leads2Tag) {
-    s.addElement("color", gui::json::String(COLOR_TAG));
-    s.addElement("arrows", gui::json::String("from"));
-  } else {
-    s.addElement("color", gui::json::String(COLOR_ATTR));
-  }
-  edges.addElement(s);
-};
-
-void XML_model::updateJsonTag(gui::json::arrayJSON& nodes, gui::json::arrayJSON& edges,
-    std::size_t& counter, const xmlPrs::Tag& tag, const std::string& tag_name,
-    const xmlNodePosition& parentPosition,
-    const std::size_t& parentId) {
-    xmlNodePosition position(parentPosition);
-    position.pathFromRoot.push_back(tag_name);
-    ++counter;
-    this->nodesInfo.emplace(counter, position);
-    printTag(nodes, counter, tag_name);
-    printEdge(edges, parentId, counter, true);
-    std::size_t thisId = counter;
-    const auto& attributes = tag.getAttributes();
-    for (auto it = attributes.begin(); it != attributes.end(); ++it) {
-        xmlNodePosition attrPos(position);
-        attrPos.attributeName.set(it->first);
-        ++counter;
-        this->nodesInfo.emplace(counter, attrPos);
-        printAttribute(nodes, counter, it->first, it->second);
-        printEdge(edges, thisId, counter, false);
+namespace xmlPrs {
+    XMLServer::XMLServer() {
+        updateEntityMap();
     }
-    for (const auto& [name, nested] : tag.getNested()) {
-        this->updateJsonTag(nodes, edges, counter, *nested, name, position, thisId);
+
+    namespace {
+        template<typename TagCase, typename AttributeCase>
+        void use_entity_pointer(const EntityPtr& entity_ptr, const TagCase& tag_case, const AttributeCase& attribute_case) {
+            struct Visitor {
+                const TagCase& tag_case;
+                const AttributeCase& attribute_case;
+
+                void operator()(Tag* ptr) const {
+                    tag_case(ptr);
+                };
+
+                void operator()(const AttributePtr& ptr) const {
+                    attribute_case(ptr);
+                };
+            };
+
+            std::visit(Visitor{tag_case, attribute_case}, entity_ptr);
+        }
     }
-}
 
-void XML_model::updateJsonNodes() {
-  this->nodesInfo.clear();
-  std::size_t counter = 0;
-  xmlNodePosition rootPosition;
-  this->nodesInfo.emplace(counter, rootPosition);
-  gui::json::arrayJSON nodes, edges;
-  printTag(nodes, 0, this->root.getName(), true);
-  const auto& attributes = root.getAttributes();
-  for (auto it = attributes.begin(); it != attributes.end(); ++it) {
-    xmlNodePosition attrPos(rootPosition);
-    attrPos.attributeName.set(it->first);
-    ++counter;
-    this->nodesInfo.emplace(counter, attrPos);
-    printAttribute(nodes, counter, it->first, it->second);
-    printEdge(edges, 0, counter, false);
-  }
-  for (const auto& [name, nested] : root.getNested()) {
-      this->updateJsonTag(nodes, edges, counter, *nested, name, rootPosition, 0);
-  }
-  gui::json::structJSON json;
-  json.addElement("nodes", nodes);
-  json.addElement("edges", edges);
-  this->dataJSON = json.str();
-}
-
-#define FIND_OPT_O(RETURN_FAIL)                                                \
-  auto itOpt = opt.getValues().find('o');                                      \
-  if (itOpt == opt.getValues().end()) {                                        \
-    std::cout << "options not found" << std::endl;                             \
-    return RETURN_FAIL;                                                        \
-  }
-
-std::string XML_model::GetNodeType(const gui::RequestOptions &opt) {
-  FIND_OPT_O("u")
-  std::string result = "n";
-  auto it = this->nodesInfo.find(std::atoi(itOpt->second[0].c_str()));
-  if (it != this->nodesInfo.end()) {
-    if (nullptr == it->second.attributeName) {
-      result = "t";
-      std::cout << "is a tag" << std::endl;
-
-    } else {
-      result = "a";
-      std::cout << "is an attribute" << std::endl;
+    const std::string& XMLServer::GetJSON() {
+        if (nullptr == xml_json) {
+            updateJSON();
+        }
+        return xml_json->dump();
     }
-  } else {
-    std::cout << "undefined node type" << std::endl;
-  }
-  return result;
-}
 
-std::string XML_model::Import(const gui::RequestOptions &opt) {
-  FIND_OPT_O(this->GetJSON())
-  try {
-    std::cout << "importing " << itOpt->second[0] << std::endl;
-    auto new_data = xmlPrs::parse_xml(itOpt->second[0]);
-    if (std::get_if<xmlPrs::Error>(&new_data) != nullptr) {
-        throw std::get<xmlPrs::Error>(new_data);
+    const EntityPtr& XMLServer::FindEntity(const gui::Request& req) {
+        const std::size_t entity_id = static_cast<std::size_t>(std::atoi((*req["o"]).c_str()));
+        if (entity_id >= xml_map.size()) {
+            throw std::runtime_error{ "Unknown entity" };
+        }
+        return xml_map[entity_id].ptr;
     }
-    std::cout << "success" << std::endl;
-    auto& as_root = std::get<xmlPrs::Root>(new_data);
-    this->root.setName(as_root.getName());
-    this->root = std::move(as_root);
-    this->updateJsonNodes();
-  } catch (...) {
-  }
-  return this->GetJSON();
-}
 
-void XML_model::Export(const gui::RequestOptions &opt) {
-  FIND_OPT_O()
-  try {
-    std::cout << "exporting " << itOpt->second[0] << std::endl;
-    std::ofstream stream(itOpt->second[0]);
-    stream << this->root;
-    std::cout << "success" << std::endl;
-  } catch (...) {
-    return;
-  }
-}
-
-std::string XML_model::Delete(const gui::RequestOptions &opt) {
-  FIND_OPT_O(this->GetJSON())
-  std::size_t id = std::atoi(itOpt->second[0].c_str());
-  if (id == 0) {
-    std::cout << "request to delete root refused" << std::endl;
-    return this->GetJSON();
-  }
-  auto it = this->nodesInfo.find(id);
-  if (it != this->nodesInfo.end()) {
-    auto &tag = this->root.getDescendant(it->second.pathFromRoot);
-    if (nullptr == it->second.attributeName) {
-      std::cout << "deleting tag " << it->second.pathFromRoot.back() << std::endl;
-      tag.remove();
-    } else {
-      std::cout << "deleting attribute " << *it->second.attributeName
-                << std::endl;
-      auto itA = tag.getAttributes().find(*it->second.attributeName);
-      tag.getAttributes().erase(itA);
+    std::string XMLServer::FindEntityType(const gui::Request& req) {
+        auto ptr = FindEntity(req);
+        std::string result;
+        use_entity_pointer(ptr, 
+            [&result](Tag* ptr) { result = "tag"; },
+            [&result](const AttributePtr& ptr) { result = "attribute"; });
+        return result;
     }
-    this->updateJsonNodes();
-    return this->GetJSON();
-  }
-  std::cout << "delete undefined node" << std::endl;
-  return this->GetJSON();
-}
 
-std::string XML_model::Rename(const gui::RequestOptions &opt) {
-  FIND_OPT_O(this->GetJSON())
-  if (itOpt->second.size() < 2)
-    return this->GetJSON();
-  std::size_t id = std::atoi(itOpt->second[0].c_str());
-  auto it = this->nodesInfo.find(id);
-  if (it != this->nodesInfo.end()) {
-    auto& tag = this->root.getDescendant(it->second.pathFromRoot);
-    if (nullptr == it->second.attributeName) {
-      std::cout << "renaming tag " << it->second.pathFromRoot.back() << std::endl;
-      tag.rename(itOpt->second[1]);
-    } else {
-      std::cout << "renaming attribute " << *it->second.attributeName
-                << std::endl;
-      auto rangeA = tag.getAttributes().equal_range(*it->second.attributeName);
-      for (auto itA = rangeA.first; itA != rangeA.second; ++itA) {
-          const std::string attr_val = itA->second;
-          tag.getAttributes().erase(itA);
-          tag.getAttributes().emplace(itOpt->second[1], attr_val);
-      }
+    void XMLServer::Import(const gui::Request& req) {
+        auto imported = parse_xml(*req["o"]);
+        auto* as_error = std::get_if<Error>(&imported);
+        if (nullptr != as_error) {
+            throw* as_error;
+        }
+        auto& as_xml = std::get<Root>(imported);
+        xml.setName(as_xml.getName());
+        xml = std::move(as_xml);
+        updateEntityMap();
     }
-    this->updateJsonNodes();
-    return this->GetJSON();
-  }
-  std::cout << "rename undefined node" << std::endl;
-  return this->GetJSON();
-}
 
-std::string XML_model::NestTag(const gui::RequestOptions &opt) {
-  FIND_OPT_O(this->GetJSON())
-  if (itOpt->second.size() < 2)
-    return this->GetJSON();
-  std::size_t parentId = std::atoi(itOpt->second[0].c_str());
-  auto it = this->nodesInfo.find(parentId);
-  if (it != this->nodesInfo.end() && (nullptr == it->second.attributeName)) {
-    auto& tag = this->root.getDescendant(it->second.pathFromRoot);
-    std::cout << "nest tag " << itOpt->second[1] << " to tag " << it->second.pathFromRoot.back()
-              << std::endl;
-    tag.addNested(itOpt->second[1]);
-    this->updateJsonNodes();
-    return this->GetJSON();
-  }
-  std::cout << "nest tag to undefined node" << std::endl;
-  return this->GetJSON();
-}
+    void XMLServer::Export(const gui::Request& req) {
+        std::ofstream stream(*req["o"]);
+        if (!stream.is_open()) {
+            throw std::runtime_error{"Invalid file location"};
+        }
+        stream << xml;
+    }
 
-std::string XML_model::NestAttribute(const gui::RequestOptions &opt) {
-  FIND_OPT_O(this->GetJSON())
-  if (itOpt->second.size() < 2)
-    return this->GetJSON();
-  std::size_t parentId = std::atoi(itOpt->second[0].c_str());
-  auto it = this->nodesInfo.find(parentId);
-  if (it != this->nodesInfo.end() && (nullptr == it->second.attributeName)) {
-    auto& tag = this->root.getDescendant(it->second.pathFromRoot);
-    std::cout << "nest attribute " << itOpt->second[1] << " to tag "
-              << it->second.pathFromRoot.back() << std::endl;
-    tag.getAttributes().emplace(itOpt->second[1], "undefined");
-    this->updateJsonNodes();
-    return this->GetJSON();
-  }
-  std::cout << "nest attribute to undefined node" << std::endl;
-  return this->GetJSON();
-}
+    void XMLServer::Delete(const gui::Request& req) {
+        auto ptr = FindEntity(req);
+        use_entity_pointer(ptr,
+            [this](Tag* ptr) { 
+                if (ptr == &this->xml) {
+                    throw std::runtime_error{"can't delete root"};
+                }
+                ptr->remove(); 
+            },
+            [](const AttributePtr& ptr) { ptr.parent->getAttributes().erase(ptr.attribute); });
+        updateEntityMap();
+    }
 
-std::string XML_model::SetValue(const gui::RequestOptions &opt) {
-  FIND_OPT_O(this->GetJSON())
-  if (itOpt->second.size() < 2)
-    return this->GetJSON();
-  std::size_t id = std::atoi(itOpt->second[0].c_str());
-  auto it = this->nodesInfo.find(id);
-  if (it != this->nodesInfo.end() && (nullptr != it->second.attributeName)) {
-    auto& tag = this->root.getDescendant(it->second.pathFromRoot);
-    std::cout << "set value of attribute in tag " << it->second.pathFromRoot.back() << std::endl;
-    auto itA = tag.getAttributes().find(*it->second.attributeName);
-    itA->second = itOpt->second[1];
-    this->updateJsonNodes();
-    return this->GetJSON();
-  }
-  std::cout << "set value of undefined node" << std::endl;
-  return this->GetJSON();
+    void XMLServer::Rename(const gui::Request& req) {
+        auto ptr = FindEntity(req);
+        use_entity_pointer(ptr,
+            [&req](Tag* ptr) { ptr->rename(req["o"][1]); },
+            [&req](const AttributePtr& ptr) { 
+                auto value = ptr.attribute->second;
+                ptr.parent->getAttributes().erase(ptr.attribute);
+                ptr.parent->getAttributes().emplace(req["o"][1], value);
+            });
+        updateEntityMap();
+    }
+
+    void XMLServer::NestTag(const gui::Request& req) {
+        auto ptr = FindEntity(req);
+        use_entity_pointer(ptr,
+            [&req](Tag* ptr) {  ptr->addNested(req["o"][1]); },
+            [&req](const AttributePtr& ptr) { throw std::runtime_error{ "Can't nest tag to attribute" }; });
+        updateEntityMap();
+    }
+
+    void XMLServer::NestAttribute(const gui::Request& req) {
+        auto ptr = FindEntity(req);
+        use_entity_pointer(ptr,
+            [&req](Tag* ptr) { ptr->getAttributes().emplace(req["o"][1], "undefined"); },
+            [&req](const AttributePtr& ptr) { throw std::runtime_error{ "Can't nest attribute to attribute" }; });
+        updateEntityMap();
+    }
+
+    void XMLServer::SetAttributeValue(const gui::Request& req) {
+        auto ptr = FindEntity(req);
+        use_entity_pointer(ptr,
+            [&req](Tag* ptr) { throw std::runtime_error{ "This is not an attribute whose value can be modified" }; },
+            [&req](const AttributePtr& ptr) {
+                auto name = ptr.attribute->first;
+                ptr.parent->getAttributes().erase(ptr.attribute);
+                ptr.parent->getAttributes().emplace(name, req["o"][1]);
+            });
+        updateEntityMap();
+    }
+
+    void XMLServer::updateEntityMap() {
+        struct TagAndParent {
+            Tag* tag;
+            std::size_t parent;
+        };
+
+        xml_map.clear();
+        std::list<TagAndParent> open;
+        open.push_back(TagAndParent{&this->xml, 0});
+        while (!open.empty()) {
+            auto to_explore = open.front();
+            open.pop_front();
+            std::size_t added_id = xml_map.size();
+            xml_map.push_back(EntityPtrAndParent{to_explore.tag, to_explore.parent});
+            // explore attributes
+            for (auto it = to_explore.tag->getAttributes().begin(); it != to_explore.tag->getAttributes().end(); ++it) {
+                xml_map.push_back(EntityPtrAndParent{ AttributePtr{to_explore.tag, it}, added_id });
+            }
+            // add to open set children to explore it later
+            for (const auto& [name, tag]: to_explore.tag->getNested()) {
+                open.push_back(TagAndParent{ tag.get(), added_id});
+            }
+        }
+    }
+
+    namespace {
+        static const std::string COLOR_TAG = "#0A5407";
+        static const std::string COLOR_TAG_ROOT = "#D26C00";
+        static const std::string COLOR_ATTR = "#A59407";
+
+        void add_attribute(nlohmann::json& nodes, const Attributes::iterator& attribute, const std::size_t id) {
+            auto& node = nodes.emplace_back();
+            std::stringstream label_stream;
+            label_stream << attribute->first << '=' << attribute->second;
+            node["label"] = label_stream.str();
+            node["color"] = COLOR_ATTR;
+            node["id"] = id;
+            node["shape"] = "box";
+        }
+
+        const std::string& get_tag_name(const Tag* tag) {
+            if (tag->hasFather()) {
+                const std::string* result = nullptr;
+                for (auto it = tag->getFather().getNested().begin(); it != tag->getFather().getNested().end(); ++it) {
+                    if (it->second.get() == tag) {
+                        result = &it->first;
+                        break;
+                    }
+                }
+                return *result;
+            }
+            return static_cast<const Root*>(tag)->getName();
+        }
+
+        void add_tag(nlohmann::json& nodes, const Tag* tag, const std::size_t id) {
+            auto& node = nodes.emplace_back();
+            std::stringstream label_stream;
+            label_stream << '<' << get_tag_name(tag) << '>';
+            node["label"] = label_stream.str();
+            if (tag->hasFather()) {
+                node["color"] = COLOR_TAG;
+            }
+            else {
+                node["color"] = COLOR_TAG_ROOT;
+            }
+            node["id"] = id;
+        };
+
+        void add_edge(nlohmann::json& edges, const EntityPtrAndParent& ptr, const std::size_t id) {
+            auto& edge = edges.emplace_back();
+            edge["from"] = ptr.parent;
+            edge["to"] = id;
+            use_entity_pointer(ptr.ptr,
+                [&edge](Tag* ptr) {
+                    edge["color"] = COLOR_TAG;
+                    edge["arrows"] = "from";
+                },
+                [&edge](const AttributePtr& ptr) {
+                    edge["color"] = COLOR_ATTR;
+                });
+        };
+    }
+
+    void XMLServer::updateJSON() {
+        xml_json = std::make_unique<nlohmann::json>();
+        auto& nodes = (*xml_json)["nodes"];
+        auto& edges = (*xml_json)["edges"];
+        for (std::size_t id = 0; id < xml_map.size(); ++id) {
+            use_entity_pointer(xml_map[id].ptr,
+                [&](Tag* ptr) {
+                    add_tag(nodes, ptr, id);
+                },
+                [&](const AttributePtr& ptr) {
+                    add_attribute(nodes, ptr.attribute, id);
+                });
+            add_edge(edges, xml_map[id], id);
+        }
+    }
+
+    gui::Actions XMLServer::getPOSTActions() {
+        gui::Actions result;
+        result.emplace("getJSON", [this](const gui::Request& req, gui::Response& resp) {
+            resp = this->GetJSON();
+        });
+        result.emplace("getNodeType", [this](const gui::Request& req, gui::Response& resp) {
+            resp = this->FindEntityType(req);
+        });
+        result.emplace("default_example", [this](const gui::Request& req, gui::Response& resp) {
+            std::stringstream stream;
+            stream << EXAMPLE_FOLDER << "XML_example_01.xml";
+            resp = stream.str();
+        });
+        result.emplace("import", [this](const gui::Request& req, gui::Response& resp) {
+            this->Import(req);
+            resp = this->GetJSON();
+        });
+        result.emplace("export", [this](const gui::Request& req, gui::Response& resp) {
+            this->Export(req);
+        });
+        result.emplace("delete", [this](const gui::Request& req, gui::Response& resp) {
+            this->Delete(req);
+            resp = this->GetJSON();
+        });
+        result.emplace("rename", [this](const gui::Request& req, gui::Response& resp) {
+            this->Rename(req);
+            resp = this->GetJSON();
+        });
+        result.emplace("nestTag", [this](const gui::Request& req, gui::Response& resp) {
+            this->NestTag(req);
+            resp = this->GetJSON();
+        });
+        result.emplace("nestAttribute", [this](const gui::Request& req, gui::Response& resp) {
+            this->NestAttribute(req);
+            resp = this->GetJSON();
+        });
+        result.emplace("setValue", [this](const gui::Request& req, gui::Response& resp) {
+            this->SetAttributeValue(req);
+            resp = this->GetJSON();
+        });
+        return result;
+    }
 }

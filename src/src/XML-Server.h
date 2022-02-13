@@ -1,42 +1,56 @@
 #include <HttpGui/Server.h>
 #include <XML-Parser/Tag.h>
+#include <optional>
 
-class XML_model : public gui::Server {
-public:
-  XML_model();
+namespace xmlPrs {
+    struct AttributePtr {
+        Tag* parent;
+        Attributes::iterator attribute;
+    };
+    using EntityPtr = std::variant<Tag*, AttributePtr>;
 
-  inline const std::string &GetJSON() const { return this->dataJSON; };
+    struct EntityPtrAndParent {
+        EntityPtr ptr;
+        std::size_t parent;
+    };
 
-  std::string GetNodeType(const gui::RequestOptions &opt);
+    using EntityMap = std::vector<EntityPtrAndParent>;
 
-  std::string Import(const gui::RequestOptions &opt);
+    class XMLServer : public gui::Server {
+    public:
+        XMLServer();
 
-  void Export(const gui::RequestOptions &opt);
+    protected:
+        gui::Actions getPOSTActions() final;
+        gui::Actions getGETActions() final { return {}; };
 
-  std::string Delete(const gui::RequestOptions &opt);
+        const std::string& GetJSON();
 
-  std::string Rename(const gui::RequestOptions &opt);
+        const EntityPtr& FindEntity(const gui::Request& req);
+        std::string FindEntityType(const gui::Request& req);
 
-  std::string NestTag(const gui::RequestOptions &opt);
+        void Import(const gui::Request& req);
 
-  std::string NestAttribute(const gui::RequestOptions &opt);
+        void Export(const gui::Request& req);
 
-  std::string SetValue(const gui::RequestOptions &opt);
+        void Delete(const gui::Request& req);
 
-private:
-  struct xmlNodePosition {
-    std::vector<xmlPrs::Name> pathFromRoot;
-    OptionalString attributeName; // empty for tag
-  };
-  void updateJsonNodes();
-  void updateJsonTag(gui::json::arrayJSON &nodes, gui::json::arrayJSON &edges,
-                     std::size_t &counter, const xmlPrs::Tag &tag,
-                     const std::string &tag_name,
-                     const xmlNodePosition &parentPosition,
-                     const std::size_t &parentId);
+        void Rename(const gui::Request& req);
 
-  // data
-  xmlPrs::Root xml_model;
-  std::map<std::size_t, xmlNodePosition> nodesInfo;
-  std::string dataJSON;
-};
+        void NestTag(const gui::Request& req);
+
+        void NestAttribute(const gui::Request& req);
+
+        void SetAttributeValue(const gui::Request& req);
+
+    private:
+        Root xml;
+
+        void updateEntityMap();
+        EntityMap xml_map;
+
+        void updateJSON();
+        std::unique_ptr<nlohmann::json> xml_json;
+    };
+}
+
