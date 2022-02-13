@@ -236,22 +236,22 @@ namespace xmlPrs {
 
     gui::Actions XMLServer::getGETActions() {
         gui::Actions result;
-        result.emplace("getJSON", [this](const gui::Request& req, gui::Response& resp) {
-            resp = this->GetJSON();
-        });
-        result.emplace("getNodeType", [this](const gui::Request& req, gui::Response& resp) {
-            resp = this->FindEntityType(req);
-        });
-        result.emplace("default_example", [this](const gui::Request& req, gui::Response& resp) {
-            std::stringstream stream;
-            stream << EXAMPLE_FOLDER << "XML_example_01.xml";
-            resp = stream.str();
-        });
         return result;
     }
 
     gui::Actions XMLServer::getPOSTActions() {
         gui::Actions result;
+        result.emplace("getJSON", [this](const gui::Request& req, gui::Response& resp) {
+            resp = this->GetJSON();
+            });
+        result.emplace("getNodeType", [this](const gui::Request& req, gui::Response& resp) {
+            resp = this->FindEntityType(req);
+            });
+        result.emplace("default_example", [this](const gui::Request& req, gui::Response& resp) {
+            std::stringstream stream;
+            stream << EXAMPLE_FOLDER << "XML_example_01.xml";
+            resp = stream.str();
+            });
         result.emplace("import", [this](const gui::Request& req, gui::Response& resp) {
             this->Import(req);
             resp = this->GetJSON();

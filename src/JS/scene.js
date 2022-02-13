@@ -4,10 +4,10 @@ class Scene{
 		this.commandActions = [cleanCommands, tagCommands, attrCommands];
 		this.canvas = network_canvas;
 		this.selectedNode = null;
-		this.sendCommand("getJSON", []);
+		this.sendCommand("getJSON", null);
 	}
 
-	sendCommand(comandName, comandArgs, onResponse = null) {
+	sendCommand(comandName, comandBody, onResponse = null) {
 		const xhr = new XMLHttpRequest();
 		if(onResponse === null){
 			let this_ref = this;
@@ -17,12 +17,8 @@ class Scene{
 			xhr.addEventListener('load', ()=>{onResponse(xhr.response);});
 		}
 		xhr.addEventListener('error', ()=>{ console.log("error"); });
-		xhr.open('POST', 'http://localhost:3000/' + comandName);
-		let comandBody = '';
-		for(let k=0; k<comandArgs.length; ++k) {
-			comandBody += ' o ' + comandArgs[k];
-		}
-		xhr.send( comandBody );
+		xhr.open('POST', 'http://localhost:64000/' + comandName);
+		xhr.send( JSON.stringify(comandBody) );
 	}
 
 	_updateStructure(newJSON) {
@@ -42,11 +38,11 @@ class Scene{
 		this.network.on("click", (params) => {
 			params.event = "[original event]";
 			this.selectedNode =  params.nodes[0];
-			this.sendCommand("getNodeType", [this.selectedNode], (nodeType)=>{ 
-				if(nodeType === 't'){
+			this.sendCommand("getNodeType", {"entity":this.selectedNode}, (nodeType)=>{ 
+				if(nodeType === 'tag'){
 					this_ref.commandActions[1]();
 				}
-				else if(nodeType === 'a') {
+				else if(nodeType === 'attribute') {
 					this_ref.commandActions[2]();
 				}
 				else {
