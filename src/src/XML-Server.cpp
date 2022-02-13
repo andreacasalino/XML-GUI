@@ -5,7 +5,7 @@
 
 namespace xmlPrs {
     XMLServer::XMLServer() {
-        updateEntityMap();
+        updateEntities();
     }
 
     namespace {
@@ -28,19 +28,19 @@ namespace xmlPrs {
         }
     }
 
-    const std::string& XMLServer::GetJSON() {
+    const nlohmann::json& XMLServer::GetJSON() {
         if (nullptr == xml_json) {
             updateJSON();
         }
-        return xml_json->dump();
+        return *xml_json;
     }
 
     const EntityPtr& XMLServer::FindEntity(const gui::Request& req) {
-        const std::size_t entity_id = static_cast<std::size_t>(std::atoi((*req["o"]).c_str()));
-        if (entity_id >= xml_map.size()) {
+        const std::size_t entity_id = static_cast<std::size_t>(std::atoi((*req["entity"]).c_str()));
+        if (entity_id >= xml_entities.size()) {
             throw std::runtime_error{ "Unknown entity" };
         }
-        return xml_map[entity_id].ptr;
+        return xml_entities[entity_id];
     }
 
     std::string XMLServer::FindEntityType(const gui::Request& req) {
@@ -53,7 +53,7 @@ namespace xmlPrs {
     }
 
     void XMLServer::Import(const gui::Request& req) {
-        auto imported = parse_xml(*req["o"]);
+        auto imported = parse_xml(*req["file"]);
         auto* as_error = std::get_if<Error>(&imported);
         if (nullptr != as_error) {
             throw* as_error;
@@ -61,11 +61,11 @@ namespace xmlPrs {
         auto& as_xml = std::get<Root>(imported);
         xml.setName(as_xml.getName());
         xml = std::move(as_xml);
-        updateEntityMap();
+        updateEntities();
     }
 
     void XMLServer::Export(const gui::Request& req) {
-        std::ofstream stream(*req["o"]);
+        std::ofstream stream(*req["file"]);
         if (!stream.is_open()) {
             throw std::runtime_error{"Invalid file location"};
         }
@@ -82,35 +82,35 @@ namespace xmlPrs {
                 ptr->remove(); 
             },
             [](const AttributePtr& ptr) { ptr.parent->getAttributes().erase(ptr.attribute); });
-        updateEntityMap();
+        updateEntities();
     }
 
     void XMLServer::Rename(const gui::Request& req) {
         auto ptr = FindEntity(req);
         use_entity_pointer(ptr,
-            [&req](Tag* ptr) { ptr->rename(req["o"][1]); },
+            [&req](Tag* ptr) { ptr->rename(*req["name"]); },
             [&req](const AttributePtr& ptr) { 
                 auto value = ptr.attribute->second;
                 ptr.parent->getAttributes().erase(ptr.attribute);
-                ptr.parent->getAttributes().emplace(req["o"][1], value);
+                ptr.parent->getAttributes().emplace(*req["name"], value);
             });
-        updateEntityMap();
+        updateEntities();
     }
 
     void XMLServer::NestTag(const gui::Request& req) {
         auto ptr = FindEntity(req);
         use_entity_pointer(ptr,
-            [&req](Tag* ptr) {  ptr->addNested(req["o"][1]); },
+            [&req](Tag* ptr) {  ptr->addNested(*req["name"]); },
             [&req](const AttributePtr& ptr) { throw std::runtime_error{ "Can't nest tag to attribute" }; });
-        updateEntityMap();
+        updateEntities();
     }
 
     void XMLServer::NestAttribute(const gui::Request& req) {
         auto ptr = FindEntity(req);
         use_entity_pointer(ptr,
-            [&req](Tag* ptr) { ptr->getAttributes().emplace(req["o"][1], "undefined"); },
+            [&req](Tag* ptr) { ptr->getAttributes().emplace(*req["name"], "undefined"); },
             [&req](const AttributePtr& ptr) { throw std::runtime_error{ "Can't nest attribute to attribute" }; });
-        updateEntityMap();
+        updateEntities();
     }
 
     void XMLServer::SetAttributeValue(const gui::Request& req) {
@@ -120,28 +120,38 @@ namespace xmlPrs {
             [&req](const AttributePtr& ptr) {
                 auto name = ptr.attribute->first;
                 ptr.parent->getAttributes().erase(ptr.attribute);
-                ptr.parent->getAttributes().emplace(name, req["o"][1]);
+                ptr.parent->getAttributes().emplace(name, *req["value"]);
             });
-        updateEntityMap();
+        updateEntities();
     }
 
-    void XMLServer::updateEntityMap() {
+    EntityPtr::EntityPtr(Tag* ptr, std::size_t parent_id)
+        : std::variant<Tag*, AttributePtr>(ptr)
+        , parent_id(parent_id) {
+    }
+
+    EntityPtr::EntityPtr(const AttributePtr& ptr, std::size_t parent_id)
+        : std::variant<Tag*, AttributePtr>(ptr)
+        , parent_id(parent_id) {
+    }
+
+    void XMLServer::updateEntities() {
         struct TagAndParent {
             Tag* tag;
             std::size_t parent;
         };
 
-        xml_map.clear();
+        xml_entities.clear();
         std::list<TagAndParent> open;
         open.push_back(TagAndParent{&this->xml, 0});
         while (!open.empty()) {
             auto to_explore = open.front();
             open.pop_front();
-            std::size_t added_id = xml_map.size();
-            xml_map.push_back(EntityPtrAndParent{to_explore.tag, to_explore.parent});
+            std::size_t added_id = xml_entities.size();
+            xml_entities.emplace_back(to_explore.tag, to_explore.parent);
             // explore attributes
             for (auto it = to_explore.tag->getAttributes().begin(); it != to_explore.tag->getAttributes().end(); ++it) {
-                xml_map.push_back(EntityPtrAndParent{ AttributePtr{to_explore.tag, it}, added_id });
+                xml_entities.emplace_back(AttributePtr{to_explore.tag, it}, added_id );
             }
             // add to open set children to explore it later
             for (const auto& [name, tag]: to_explore.tag->getNested()) {
@@ -193,11 +203,11 @@ namespace xmlPrs {
             node["id"] = id;
         };
 
-        void add_edge(nlohmann::json& edges, const EntityPtrAndParent& ptr, const std::size_t id) {
+        void add_edge(nlohmann::json& edges, const EntityPtr& ptr, const std::size_t id) {
             auto& edge = edges.emplace_back();
-            edge["from"] = ptr.parent;
+            edge["from"] = ptr.parent_id;
             edge["to"] = id;
-            use_entity_pointer(ptr.ptr,
+            use_entity_pointer(ptr,
                 [&edge](Tag* ptr) {
                     edge["color"] = COLOR_TAG;
                     edge["arrows"] = "from";
@@ -212,19 +222,19 @@ namespace xmlPrs {
         xml_json = std::make_unique<nlohmann::json>();
         auto& nodes = (*xml_json)["nodes"];
         auto& edges = (*xml_json)["edges"];
-        for (std::size_t id = 0; id < xml_map.size(); ++id) {
-            use_entity_pointer(xml_map[id].ptr,
+        for (std::size_t id = 0; id < xml_entities.size(); ++id) {
+            use_entity_pointer(xml_entities[id],
                 [&](Tag* ptr) {
                     add_tag(nodes, ptr, id);
                 },
                 [&](const AttributePtr& ptr) {
                     add_attribute(nodes, ptr.attribute, id);
                 });
-            add_edge(edges, xml_map[id], id);
+            add_edge(edges, xml_entities[id], id);
         }
     }
 
-    gui::Actions XMLServer::getPOSTActions() {
+    gui::Actions XMLServer::getGETActions() {
         gui::Actions result;
         result.emplace("getJSON", [this](const gui::Request& req, gui::Response& resp) {
             resp = this->GetJSON();
@@ -237,6 +247,11 @@ namespace xmlPrs {
             stream << EXAMPLE_FOLDER << "XML_example_01.xml";
             resp = stream.str();
         });
+        return result;
+    }
+
+    gui::Actions XMLServer::getPOSTActions() {
+        gui::Actions result;
         result.emplace("import", [this](const gui::Request& req, gui::Response& resp) {
             this->Import(req);
             resp = this->GetJSON();

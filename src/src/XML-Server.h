@@ -7,14 +7,13 @@ namespace xmlPrs {
         Tag* parent;
         Attributes::iterator attribute;
     };
-    using EntityPtr = std::variant<Tag*, AttributePtr>;
 
-    struct EntityPtrAndParent {
-        EntityPtr ptr;
-        std::size_t parent;
+    struct EntityPtr : public std::variant<Tag*, AttributePtr> {
+        EntityPtr(Tag* ptr, std::size_t parent_id);
+        EntityPtr(const AttributePtr& ptr, std::size_t parent_id);
+
+        std::size_t parent_id;
     };
-
-    using EntityMap = std::vector<EntityPtrAndParent>;
 
     class XMLServer : public gui::Server {
     public:
@@ -22,9 +21,9 @@ namespace xmlPrs {
 
     protected:
         gui::Actions getPOSTActions() final;
-        gui::Actions getGETActions() final { return {}; };
+        gui::Actions getGETActions() final;
 
-        const std::string& GetJSON();
+        const nlohmann::json& GetJSON();
 
         const EntityPtr& FindEntity(const gui::Request& req);
         std::string FindEntityType(const gui::Request& req);
@@ -46,8 +45,8 @@ namespace xmlPrs {
     private:
         Root xml;
 
-        void updateEntityMap();
-        EntityMap xml_map;
+        void updateEntities();
+        std::vector<EntityPtr> xml_entities;
 
         void updateJSON();
         std::unique_ptr<nlohmann::json> xml_json;
