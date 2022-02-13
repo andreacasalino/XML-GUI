@@ -55,9 +55,9 @@
             let btn_Import = get_button("img/Import.svg", "Import new structure");
             C.appendChild(btn_Import);
             btn_Import.addEventListener("click" , function(){
-                scene.sendCommand("default_example", [], (default_example) => {
-                    let file_location = prompt("Enter the location of the file w.r.t the server application", default_example);
-                    scene.sendCommand("import", [file_location]);
+                scene.sendCommand("default_example", null, (default_example) => {
+                    let file_location = prompt("Enter the location of the file w.r.t the server application", JSON.parse(default_example));
+                    scene.sendCommand("import", {"file":file_location});
                 });
             });
             
@@ -65,7 +65,7 @@
             C.appendChild(btn_Export);
             btn_Export.addEventListener("click" , function(){
                 let file_location = prompt("Enter the location where you want to save the structure", "./prova_export.xml");
-                scene.sendCommand("export", [file_location], (result)=>{ return; });
+                scene.sendCommand("export", {"file":file_location}, (result)=>{ return; });
             });
 
             let btns_temp = [];
@@ -83,7 +83,7 @@
                 btns_temp.push(btn_temp);
                 btn_temp.style.marginTop = "50px";
                 btn_temp.addEventListener("click" , function(){ 
-                    scene.sendCommand("delete", [scene.selectedNode]); 
+                    scene.sendCommand("delete", {"entity":scene.selectedNode.toString()}); 
                 });
 
                 btn_temp = get_button("img/Rename.svg", "Rename selected");
@@ -91,7 +91,7 @@
                 btns_temp.push(btn_temp);
                 btn_temp.addEventListener("click" , function(){ 
                 let new_name = prompt("Enter the new name", "new_name");
-                    scene.sendCommand("rename" , [scene.selectedNode, new_name]);                 
+                    scene.sendCommand("rename" , {"entity":scene.selectedNode.toString(), "name":new_name});                 
                 });
                 
                 btn_temp = get_button("img/New_tag.svg", "Create nested tag");
@@ -99,7 +99,7 @@
                 btns_temp.push(btn_temp);
                 btn_temp.addEventListener("click" , function(){ 
                 let new_tag = prompt("Enter the name of new tag", "new_tag");
-                    scene.sendCommand("nestTag", [scene.selectedNode, new_tag]);
+                    scene.sendCommand("nestTag", {"entity":scene.selectedNode.toString(), "name":new_tag});
                 });
                 
                 btn_temp = get_button("img/New_attribute.svg", "Create new attribute");
@@ -107,7 +107,7 @@
                 btns_temp.push(btn_temp);
                 btn_temp.addEventListener("click" , function(){ 
                 let new_attr = prompt("Enter the name of new attribute", "new_attr");
-                    scene.sendCommand("nestAttribute", [scene.selectedNode, new_attr]);
+                    scene.sendCommand("nestAttribute", {"entity":scene.selectedNode.toString(), "name":new_attr});
                 });
             };
             
@@ -117,7 +117,7 @@
                 btns_temp.push(btn_temp);
                 btn_temp.style.marginTop = "50px";
                 btn_temp.addEventListener("click" , function(){ 
-                    scene.sendCommand("delete", [scene.selectedNode]); 
+                    scene.sendCommand("delete",  {"entity":scene.selectedNode.toString()}); 
                 });
 
                 btn_temp = get_button("img/Rename.svg", "Rename selected");
@@ -125,7 +125,7 @@
                 btns_temp.push(btn_temp);
                 btn_temp.addEventListener("click" , function(){ 
                 let new_name = prompt("Enter the new name", "new_name");
-                    scene.sendCommand("rename" , [scene.selectedNode, new_name]);         
+                    scene.sendCommand("rename" ,  {"entity":scene.selectedNode.toString(), "name":new_name});         
                 });
                 
                 btn_temp = get_button("img/Set_value.svg", "Change value of selected");
@@ -133,7 +133,7 @@
                 btns_temp.push(btn_temp);
                 btn_temp.addEventListener("click" , function(){ 
                 let new_val = prompt("Enter the new value", "new_value");
-                    scene.sendCommand("setValue" , [scene.selectedNode, new_val]); 
+                    scene.sendCommand("setValue" ,  {"entity":scene.selectedNode.toString(), "value":new_val}); 
                 });
             };
 

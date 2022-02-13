@@ -3,7 +3,7 @@ include(FetchContent)
 FetchContent_Declare(
   xml_parser
   GIT_REPOSITORY https://github.com/andreacasalino/XML-parser.git
-  GIT_TAG        5006262a76192b1af4988f1530be12cec4e8b74a
+  GIT_TAG        89dd0d7a2e0ac49a1ae5b3feaed31e55136126d3
 )
 FetchContent_MakeAvailable(xml_parser)
 
@@ -11,7 +11,7 @@ include(FetchContent)
 FetchContent_Declare(
   http_lib
   GIT_REPOSITORY https://github.com/andreacasalino/Http-GUI.git
-  GIT_TAG        master
+  GIT_TAG        e5280d1d30ff5f61b2ce8a43509ce91e36f058a0
 )
 FetchContent_MakeAvailable(http_lib)
 
@@ -19,16 +19,14 @@ set(PROJECT_SHORTNAME "XML-GUI")
 
 add_executable(${PROJECT_SHORTNAME}
 XML-GUI.cpp 
-src/OptionalString.h 
-src/OptionalString.cpp 
-src/XML-model.h 
-src/XML-model.cpp
+src/XML-Server.h 
+src/XML-Server.cpp
 )
 
 target_include_directories(${PROJECT_SHORTNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 target_link_libraries(${PROJECT_SHORTNAME} PUBLIC
-Http-GUI
+HttpGui
 XML-Parser
 )
 
