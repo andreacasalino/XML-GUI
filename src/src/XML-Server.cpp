@@ -125,29 +125,31 @@ namespace xmlPrs {
         updateEntities();
     }
 
-    EntityPtr::EntityPtr(Tag* ptr, std::size_t parent_id)
+    EntityPtr::EntityPtr(Tag* ptr, const int parent_id)
         : std::variant<Tag*, AttributePtr>(ptr)
         , parent_id(parent_id) {
     }
 
-    EntityPtr::EntityPtr(const AttributePtr& ptr, std::size_t parent_id)
+    EntityPtr::EntityPtr(const AttributePtr& ptr, const int parent_id)
         : std::variant<Tag*, AttributePtr>(ptr)
         , parent_id(parent_id) {
     }
 
     void XMLServer::updateEntities() {
+        this->xml_json.reset();
+
         struct TagAndParent {
             Tag* tag;
-            std::size_t parent;
+            int parent;
         };
 
         xml_entities.clear();
         std::list<TagAndParent> open;
-        open.push_back(TagAndParent{&this->xml, 0});
+        open.push_back(TagAndParent{&this->xml, -1});
         while (!open.empty()) {
             auto to_explore = open.front();
             open.pop_front();
-            std::size_t added_id = xml_entities.size();
+            int added_id = static_cast<int>(xml_entities.size());
             xml_entities.emplace_back(to_explore.tag, to_explore.parent);
             // explore attributes
             for (auto it = to_explore.tag->getAttributes().begin(); it != to_explore.tag->getAttributes().end(); ++it) {
@@ -186,7 +188,7 @@ namespace xmlPrs {
                 }
                 return *result;
             }
-            return static_cast<const Root*>(tag)->getName();
+            return dynamic_cast<const Root*>(tag)->getName();
         }
 
         void add_tag(nlohmann::json& nodes, const Tag* tag, const std::size_t id) {

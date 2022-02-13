@@ -38,11 +38,11 @@ class Scene{
 		this.network.on("click", (params) => {
 			params.event = "[original event]";
 			this.selectedNode =  params.nodes[0];
-			this.sendCommand("getNodeType", {"entity":this.selectedNode}, (nodeType)=>{ 
-				if(nodeType === 'tag'){
+			this.sendCommand("getNodeType", { "entity": this.selectedNode.toString() }, (nodeType) => {
+				if (nodeType === '\"tag\"'){
 					this_ref.commandActions[1]();
 				}
-				else if(nodeType === 'attribute') {
+				else if (nodeType === '\"attribute\"') {
 					this_ref.commandActions[2]();
 				}
 				else {

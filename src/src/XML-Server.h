@@ -9,10 +9,10 @@ namespace xmlPrs {
     };
 
     struct EntityPtr : public std::variant<Tag*, AttributePtr> {
-        EntityPtr(Tag* ptr, std::size_t parent_id);
-        EntityPtr(const AttributePtr& ptr, std::size_t parent_id);
+        EntityPtr(Tag* ptr, const int parent_id);
+        EntityPtr(const AttributePtr& ptr, const int parent_id);
 
-        std::size_t parent_id;
+        int parent_id;
     };
 
     class XMLServer : public gui::Server {
